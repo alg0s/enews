@@ -1,0 +1,2 @@
+# enews
+enews in Go
