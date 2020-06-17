@@ -10,6 +10,12 @@ package main
         4. Add retry in case multiple clients - 1 server
 */
 
+/*
+   REF:
+	https://www.digitalocean.com/community/tutorials/understanding-data-types-in-go
+
+*/
+
 import (
 	"io/ioutil"
 	"log"
@@ -110,7 +116,6 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 		s.Host = host
 		s.MaxHeapSize = maxHeapSize
 		s.Annotators = s.getAnnotators()
-
 		return true
 	}
 
@@ -146,7 +151,12 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 
 // Stop kills the process currently running VnNLPServer and returns true if successful, otherwise false
 func (s *VnNLPServer) Stop() bool {
-	return false
+	err := s.Process.Kill()
+	if err != nil {
+		log.Println("Unable to Kill: ", err)
+		return false
+	}
+	return true
 }
 
 // KillExistingServer kills the existing process running the VnNLPServer
@@ -199,8 +209,13 @@ func (s *VnNLPServer) getAnnotators() string {
 }
 
 // Annotate sends a request to the server to ask for an annotation of a string and returns the response
-func (s *VnNLPServer) Annotate(text string) string {
-	return `PER`
+func (s *VnNLPServer) Annotate(text string, annotators string) string {
+	if annotators == "" {
+		annotators = s.Annotators
+	}
+
+	// prepare POST payload
+
 }
 
 // NewVnNLPServer initiates a new VnNLPServer instance
