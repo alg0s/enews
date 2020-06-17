@@ -17,6 +17,8 @@ package main
 */
 
 import (
+	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -215,7 +217,54 @@ func (s *VnNLPServer) Annotate(text string, annotators string) string {
 	}
 
 	// prepare POST payload
+	type Payload struct {
+		text  string
+		props string
+	}
 
+	var payload, err = json.Marshal(Payload{text: text, props: annotators})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := http.Post(s.Address+`/handle`, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll((resp.Body))
+		if err != nil {
+			log.Fatal(err)
+		}
+		return string(bodyBytes)
+	}
+	return ""
+}
+
+// Tokenize return tokens from input string, otherwise empty string
+func (s *VnNLPServer) Tokenize(text string) string {
+	return ""
+}
+
+// PosTag returns POS tags from the input string, otherwise empty string
+func (s *VnNLPServer) PosTag(text string) string {
+	return ""
+}
+
+// Ner returns NER - Named Entity Recognition from the input string, otherwise empty string
+func (s *VnNLPServer) Ner(text string) string {
+	return ""
+}
+
+// DepParse returns parsed dependencies from input string, otherwise empty string
+func (s *VnNLPServer) DepParse(text string) string {
+	return ""
+}
+
+// DetectLanguage returns the detected language of the input string
+func (s *VnNLPServer) DetectLanguage(text string) string {
+	return ""
 }
 
 // NewVnNLPServer initiates a new VnNLPServer instance
