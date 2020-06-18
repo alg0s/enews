@@ -17,11 +17,10 @@ package main
 */
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -32,12 +31,12 @@ import (
 
 const (
 	// Server Defaults
-	defaultMaxHeapSize = `-Xmx2g`
-	defaultHost        = `127.0.0.1`
-	defaultPort        = `9000`
-	defaultAnnotators  = `wseg,pos,ner,parse`
-	serverJarFile      = `lib/vncorenlp/VnCoreNLPServer.jar`
-	nlpJarFile         = `lib/vncorenlp/VnCoreNLP-1.1.1.jar`
+	defaultMaxHeapSize string = `-Xmx2g`
+	defaultHost        string = `127.0.0.1`
+	defaultPort        string = `9000`
+	defaultAnnotators  string = `wseg,pos,ner,parse`
+	serverJarFile      string = `lib/vncorenlp/VnCoreNLPServer.jar`
+	nlpJarFile         string = `lib/vncorenlp/VnCoreNLP-1.1.1.jar`
 )
 
 // VnNLPServer handles VnCoreNLP, acting as a client, but also has ability to launch the server
@@ -206,28 +205,34 @@ func (s *VnNLPServer) getAnnotators() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	bodyString := string(bodyBytes)
-	return bodyString
+
+	// process annotators
+	var a string
+	a = string(bodyBytes)
+	a = strings.ReplaceAll(a, `"`, ``)
+	a = strings.ReplaceAll(a, `[`, ``)
+	a = strings.ReplaceAll(a, `]`, ``)
+	return a
 }
 
 // Annotate sends a request to the server to ask for an annotation of a string and returns the response
-func (s *VnNLPServer) Annotate(text string, annotators string) string {
+func (s *VnNLPServer) Annotate(textInput string, annotators string) string {
 	if annotators == "" {
 		annotators = s.Annotators
 	}
 
-	// prepare POST payload
-	type Payload struct {
-		text  string
-		props string
-	}
+	// construct URL
+	urlStr := s.Address + `/handle`
+	u, _ := url.Parse(urlStr)
+	query, _ := url.ParseQuery(u.RawQuery)
+	query.Add(`text`, textInput)
+	query.Add(`props`, annotators)
+	u.RawQuery = query.Encode()
 
-	var payload, err = json.Marshal(Payload{text: text, props: annotators})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// set content type
+	contentType := `text/plain`
 
-	resp, err := http.Post(s.Address+`/handle`, "application/json", bytes.NewReader(payload))
+	resp, err := http.Post(u.String(), contentType, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -276,5 +281,7 @@ func NewVnNLPServer() *VnNLPServer {
 
 func main() {
 	var s = NewVnNLPServer()
-	s.getAnnotators()
+	var sample = `Theo Vietnam Airlines, hành khách xuống khỏi máy bay bằng xe thang, sau đó vấp ngã và bị chảy máu ở vùng đầu. Dù được cấp cứu với điều kiện tốt nhất tại Bệnh viện Quân y 175 tuy nhiên hành khách đã không qua khỏi.`
+	result := s.Annotate(sample, ``)
+	log.Println("Result: ", result)
 }
