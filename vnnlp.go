@@ -13,10 +13,11 @@ package main
 /*
    REF:
 	https://www.digitalocean.com/community/tutorials/understanding-data-types-in-go
-
+	https://deployeveryday.com/2019/10/21/python-idioms-go.html
 */
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -38,6 +39,27 @@ const (
 	serverJarFile      string = `lib/vncorenlp/VnCoreNLPServer.jar`
 	nlpJarFile         string = `lib/vncorenlp/VnCoreNLP-1.1.1.jar`
 )
+
+// Entity details of an extract entity
+type Entity struct {
+	Index    int    `json:"index"`
+	Form     string `json:"form"`
+	PosTag   string `json:"posTag"`
+	NerLabel string `json:"nerLabel"`
+	Head     int    `json:"head"`
+	DepLabel string `json:"depLabel"`
+}
+
+// Sentence is an array of Entity's
+type Sentence []Entity
+
+// ServerResponse is the response from VnNLPServer
+type ServerResponse struct {
+	Sentences []Sentence `json:"sentences"`
+	Status    bool       `json:"status"`
+	Error     string     `json:"error"`
+	Language  string     `json:"language"`
+}
 
 // VnNLPServer handles VnCoreNLP, acting as a client, but also has ability to launch the server
 // providing access to the NLP annotators
@@ -216,7 +238,7 @@ func (s *VnNLPServer) getAnnotators() string {
 }
 
 // Annotate sends a request to the server to ask for an annotation of a string and returns the response
-func (s *VnNLPServer) Annotate(textInput string, annotators string) string {
+func (s *VnNLPServer) Annotate(textInput string, annotators string) *ServerResponse {
 	if annotators == "" {
 		annotators = s.Annotators
 	}
@@ -236,40 +258,57 @@ func (s *VnNLPServer) Annotate(textInput string, annotators string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer resp.Body.Close()
+	var sr ServerResponse
+
 	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll((resp.Body))
+		// bodyBytes, err := ioutil.ReadAll((resp.Body))
+		err = json.NewDecoder(resp.Body).Decode(&sr)
 		if err != nil {
 			log.Fatal(err)
+			return nil
 		}
-		return string(bodyBytes)
+		return &sr
 	}
-	return ""
+	return nil
+}
+
+func (s *VnNLPServer) customAnnotate(text string, annotators string) *[]Sentence {
+	var result = s.Annotate(text, annotators)
+	if result.Error != "" {
+		return nil
+	}
+	return &result.Sentences
 }
 
 // Tokenize return tokens from input string, otherwise empty string
-func (s *VnNLPServer) Tokenize(text string) string {
-	return ""
+func (s *VnNLPServer) Tokenize(text string) *[]Sentence {
+	return s.customAnnotate(text, "wseg")
 }
 
 // PosTag returns POS tags from the input string, otherwise empty string
-func (s *VnNLPServer) PosTag(text string) string {
-	return ""
+func (s *VnNLPServer) PosTag(text string) *[]Sentence {
+	return s.customAnnotate(text, "wseg,pos")
 }
 
 // Ner returns NER - Named Entity Recognition from the input string, otherwise empty string
-func (s *VnNLPServer) Ner(text string) string {
-	return ""
+func (s *VnNLPServer) Ner(text string) *[]Sentence {
+	return s.customAnnotate(text, "wseg,pos,ner")
 }
 
 // DepParse returns parsed dependencies from input string, otherwise empty string
-func (s *VnNLPServer) DepParse(text string) string {
-	return ""
+func (s *VnNLPServer) DepParse(text string) *[]Sentence {
+	return s.customAnnotate(text, "wseg,pos,ner,parse")
 }
 
 // DetectLanguage returns the detected language of the input string
 func (s *VnNLPServer) DetectLanguage(text string) string {
-	return ""
+	var result = s.Annotate(text, "lang")
+	if result.Error != "" {
+		return ""
+	}
+	return result.Language
 }
 
 // NewVnNLPServer initiates a new VnNLPServer instance
@@ -277,11 +316,4 @@ func NewVnNLPServer() *VnNLPServer {
 	var s = VnNLPServer{}
 	s.Start("", "", "", "")
 	return &s
-}
-
-func main() {
-	var s = NewVnNLPServer()
-	var sample = `Theo Vietnam Airlines, hành khách xuống khỏi máy bay bằng xe thang, sau đó vấp ngã và bị chảy máu ở vùng đầu. Dù được cấp cứu với điều kiện tốt nhất tại Bệnh viện Quân y 175 tuy nhiên hành khách đã không qua khỏi.`
-	result := s.Annotate(sample, ``)
-	log.Println("Result: ", result)
 }
