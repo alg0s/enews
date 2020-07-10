@@ -40,8 +40,8 @@ const (
 	nlpJarFile         string = `lib/vncorenlp/VnCoreNLP-1.1.1.jar`
 )
 
-// Entity details of an extract entity
-type Entity struct {
+// Token details of an extract entity
+type Token struct {
 	Index    int    `json:"index"`
 	Form     string `json:"form"`
 	PosTag   string `json:"posTag"`
@@ -50,8 +50,8 @@ type Entity struct {
 	DepLabel string `json:"depLabel"`
 }
 
-// Sentence is an array of Entity's
-type Sentence []Entity
+// Sentence is an array of Token's
+type Sentence []Token
 
 // ServerResponse is the response from VnNLPServer
 type ServerResponse struct {
