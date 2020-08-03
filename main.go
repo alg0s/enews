@@ -1,8 +1,8 @@
 package main
 
 import (
-	md "enews/models"
 	pkg "enews/pkg/db"
+	schm "enews/schema"
 	"log"
 )
 
@@ -12,7 +12,7 @@ func main() {
 	db.Conn.Ping()
 	log.Println("Here")
 
-	var articles = []md.RawArticle{}
+	var articles = []schm.RawArticle{}
 
 	db.Conn.Select(&articles, "SELECT * FROM enews.raw_articles LIMIT 3")
 
