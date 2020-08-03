@@ -1,6 +1,6 @@
 // @author: goodalg0s@gmail.com
 
-package main
+package models
 
 import (
 	"database/sql"
