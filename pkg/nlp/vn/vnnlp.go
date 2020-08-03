@@ -1,6 +1,6 @@
 // @author: goodalg0s@gmail.com
 
-package main
+package nlp
 
 /*
    TODO:
@@ -36,8 +36,8 @@ const (
 	defaultHost        string = `127.0.0.1`
 	defaultPort        string = `9000`
 	defaultAnnotators  string = `wseg,pos,ner,parse`
-	serverJarFile      string = `lib/vncorenlp/VnCoreNLPServer.jar`
-	nlpJarFile         string = `lib/vncorenlp/VnCoreNLP-1.1.1.jar`
+	serverJarFile      string = `vncorenlp/VnCoreNLPServer.jar`
+	nlpJarFile         string = `vncorenlp/VnCoreNLP-1.1.1.jar`
 )
 
 // Token details of an extract entity

@@ -1,17 +1,18 @@
 package main
 
 import (
-	pkg "enews/models"
+	md "enews/models"
+	pkg "enews/pkg/db"
 	"log"
 )
 
 func main() {
 
-	var db = ConnectLocalDB()
+	var db = pkg.ConnectLocalDB()
 	db.Conn.Ping()
 	log.Println("Here")
 
-	var articles = []pkg.RawArticle{}
+	var articles = []md.RawArticle{}
 
 	db.Conn.Select(&articles, "SELECT * FROM enews.raw_articles LIMIT 3")
 
