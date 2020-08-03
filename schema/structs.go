@@ -69,7 +69,7 @@ type Entity struct {
 }
 
 /*
-	SOURCE TABLES
+	SOURCE TABLES (TEMP)
 */
 
 // RawArticle represents raw table of news article in db
