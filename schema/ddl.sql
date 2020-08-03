@@ -11,9 +11,8 @@
   ARTICLE & ENTITY TABLES 
 */
 
-
 CREATE TABLE articles (
-    id              GENERATED ALWAYS AS IDENTITY
+    id              SERIAL PRIMARY KEY
     , src_id        INT NOT NULL    
     , title         TEXT 
     , content       TEXT
@@ -21,13 +20,14 @@ CREATE TABLE articles (
 );
 
 CREATE TABLE extracted_articles (
-    id              GENERATED ALWAYS AS IDENTITY
-    , article_id    INT NOT NULL 
+    id              SERIAL PRIMARY KEY
+    , article_id    INT NOT NULL
     , entities      TEXT
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    FOREIGN KEY (article_id) 
+    , FOREIGN KEY (article_id) 
         REFERENCES articles(added_id)
         ON DELETE CASCADE
+    , UNIQUE(article_iod)
 );
 
 -- Temp_Extracted_Articles stores extracted articles and their entities temporarily, 
@@ -36,35 +36,38 @@ CREATE TABLE temp_extracted_articles (
     article_id      INT NOT NULL 
     , entities      TEXT 
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
 
 CREATE TABLE article_entities (
-    id              GENERATED ALWAYS AS IDENTITY
+    id              SERIAL
     , article_id    INT NOT NULL
     , entity        TEXT
     , entity_type   VARCHAR(500)
     , counts        SMALLINT NOT NULL
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    FOREIGN KEY (article_id) 
+    , FOREIGN KEY (article_id) 
         REFERENCES articles(added_id)
         ON DELETE CASCADE
+    , UNIQUE(article_id, entity, entity_type)
 );
 
 CREATE TABLE unique_entities (
-    id                  GENERATED ALWAYS AS IDENTITY 
+    id                  SERIAL
     , name              TEXT 
     , entity_type_id    INT  
     , created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    FOREIGN KEY (entity_type_id) 
+    , FOREIGN KEY (entity_type_id) 
         REFERENCES entity_types(id)
         ON DELETE CASCADE
+    , UNIQUE(name, entity_type_id)
 );
 
 CREATE TABLE entity_types (
-    id              GENERATED ALWAYS AS IDENTITY 
+    id              SERIAL 
     , name          VARCHAR(500) NOT NULL
     , description   TEXT  
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    , UNIQUE(name)
 );
 
 
