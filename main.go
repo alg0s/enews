@@ -1,27 +1,28 @@
 package main
 
 import (
-	pkg "enews/pkg/db"
-	schm "enews/schema"
+	"context"
+	"enews/pkg/db"
 	"log"
 )
 
-func main() {
+func connWithSQL() {
+	var conn = db.Conn()
+	var edb = db.New(conn)
 
-	var db = pkg.ConnectLocalDB()
-	db.Conn.Ping()
-	log.Println("Here")
+	articles, err := edb.ListArticles(context.Background())
 
-	var articles = []schm.RawArticle{}
-
-	db.Conn.Select(&articles, "SELECT * FROM enews.raw_articles LIMIT 3")
-
-	log.Println("Total articles: ", len(articles))
-
-	for i, a := range articles {
-		log.Println("\n---", i)
-		log.Println(a.AddedID, a.Category.String, a.Summary.String, a.PublishDate)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Println("End")
+	for i, a := range articles {
+		log.Println(i, a)
+	}
+
+	log.Println("Done")
+}
+
+func main() {
+	connWithSQL()
 }
