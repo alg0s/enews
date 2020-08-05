@@ -65,6 +65,8 @@ Enews provides a scheduling feature to automatically run extraction jobs on an h
 
 #### Configuring Logging
 
+## Dependencies
+1. **sqlc**
 
 ## Development
 
