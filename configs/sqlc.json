@@ -3,7 +3,7 @@
   "packages": [
     {
       "schema": "../schema/ddl.sql",
-      "queries": "../schema/query.sql",
+      "queries": "../schema/queries",
       "name": "db",
       "path": "../pkg/db/",
       "engine": "postgresql",
