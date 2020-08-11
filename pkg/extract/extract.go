@@ -50,6 +50,8 @@ func Extract() {
 		q.Enqueue(a)
 	}
 
+	log.Println("Queue length: ", q.Length())
+
 	// Initialize NLP service
 	var s = nlp.NewVnNLPServer()
 

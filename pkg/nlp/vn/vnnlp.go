@@ -16,7 +16,6 @@ package vn
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -127,6 +126,12 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 
 	resp, err := http.Get(address)
 
+	// assign constant values
+	s.Address = address
+	s.Port = port
+	s.Host = host
+	s.MaxHeapSize = maxHeapSize
+
 	if err != nil {
 		log.Println("Server Not Active: ", err)
 	} else {
@@ -134,17 +139,23 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 
 		if resp.StatusCode == http.StatusOK {
 			log.Println(`Server is already running on port: `, port)
+
+			// assign variables
 			s.isAlive = true
-			s.Address = address
-			s.Port = port
-			s.Host = host
-			s.MaxHeapSize = maxHeapSize
 			s.Annotators = s.getAnnotators()
+
+			// Get the existing server process
+			s.Process, err = s.findExistingServerProcess()
+			if err != nil {
+				log.Panic("Unable to find existing server process: ", err)
+			}
 			return true
 		}
 	}
 
 	// 2. if no server is running, init new
+	// TODO: utilize goroutine to initiate the server
+
 	log.Println(`Starting server...`)
 
 	serverJarFilePath, err := filepath.Abs(serverJarFile)
@@ -167,8 +178,6 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 		`-a`, annotators,
 	}
 
-	log.Println("Cmd Args: ", strings.Join(args, ` `))
-
 	cmd := exec.Command(`java`, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -182,24 +191,15 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 
 	// sleep for 5s to let the server get ready
 	time.Sleep(time.Second * 5)
-
 	s.Process = cmd.Process
-	s.Address = strings.Join([]string{`http://`, host, `:`, port}, ``)
 	s.isAlive = true
 	return true
 }
 
-// Stop kills the process currently running VnNLPServer and returns true if successful, otherwise false
-func (s *VnNLPServer) Stop() (bool, error) {
-	err := s.Process.Kill()
-	if err != nil {
-		return false, errors.New("Unable to Kill Existing VnNLPServer")
-	}
-	return true, nil
-}
+func (s *VnNLPServer) findExistingServerProcess() (*os.Process, error) {
 
-// KillExistingServer kills the existing process running the VnNLPServer
-func (s *VnNLPServer) KillExistingServer() bool {
+	// get server Port
+
 	// 1. Find PID
 	var args = []string{
 		`-t`,
@@ -209,26 +209,50 @@ func (s *VnNLPServer) KillExistingServer() bool {
 	}
 	pid, err := exec.Command(`lsof`, args...).CombinedOutput()
 	if err != nil {
-		log.Printf("Issue: %s -> %s", err, string(pid))
-		return false
+		log.Println("Err cmd: ", err, args)
+		return nil, err
 	}
 
 	// 2. FindProcess
 	intPid, err := strconv.Atoi(strings.TrimSpace(string(pid)))
 	if err != nil {
-		log.Panic(err)
+		log.Println("Err find trim space: ", err, intPid)
+		return nil, err
 	}
 
 	process, err := os.FindProcess(intPid)
 	if err != nil {
-		log.Println("Unable To FindProcess: ", err)
+		log.Println("Err find proc: ", err, process)
+		return nil, err
+	}
+	return process, nil
+}
+
+// KillExistingServer kills the existing process running the VnNLPServer
+func (s *VnNLPServer) killExistingServer() (bool, error) {
+	// 1. find Process
+	process, err := s.findExistingServerProcess()
+	if err != nil {
+		return false, err
 	}
 
+	// 2. kill Process
 	err = process.Kill()
 	if err != nil {
-		log.Println("Unable To Kill: ", err)
+		log.Panic("Unable To Kill: ", err)
+		return false, err
 	}
-	return true
+	return true, nil
+}
+
+// Stop kills the process currently running VnNLPServer and returns true if successful, otherwise false
+func (s *VnNLPServer) Stop() (bool, error) {
+	log.Println(">>> About to stop Process: ", s.Process.Pid)
+	result, err := s.killExistingServer()
+	if err != nil {
+		return false, err
+	}
+	return result, nil
 }
 
 // getAnnotators gets the annotators registered with the Server
@@ -333,17 +357,6 @@ func NewVnNLPServer() *VnNLPServer {
 	result := s.Start("", "", "", "")
 	log.Println("result start: ", result)
 	return &s
-}
-
-func Test() {
-	var s = NewVnNLPServer()
-	if s.IsServerAlive() == true {
-		s.Stop()
-	}
-	log.Println("Alive? ", s.IsServerAlive())
-	// var sample = `Theo Vietnam Airlines, hành khách xuống khỏi máy bay bằng xe thang, sau đó vấp ngã và bị chảy máu ở vùng đầu. Dù được cấp cứu với điều kiện tốt nhất tại Bệnh viện Quân y 175 tuy nhiên hành khách đã không qua khỏi.`
-	// result := s.Ner(sample)
-	// log.Println("Result: ", result)
 }
 
 // TODO: problems arised:

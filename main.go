@@ -1,28 +1,21 @@
 package main
 
+/*
+	ref:
+	https://www.opsdash.com/blog/job-queues-in-go.html
+	https://bigkevmcd.github.io/go/pgrp/context/2019/02/19/terminating-processes-in-go.html
+*/
+
 import (
-	"context"
-	"enews/pkg/db"
-	"log"
+	"enews/pkg/nlp/vn"
 )
 
-func connWithSQL() {
-	var conn = db.Conn()
-	var edb = db.New(conn)
-
-	articles, err := edb.ListArticles(context.Background())
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i, a := range articles {
-		log.Println(i, a)
-	}
-
-	log.Println("Done")
+func closeNLPServer() {
+	s := vn.NewVnNLPServer()
+	s.Stop()
 }
 
 func main() {
-	connWithSQL()
+	// extract.Extract()
+	closeNLPServer()
 }
