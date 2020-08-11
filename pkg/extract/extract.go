@@ -1,11 +1,5 @@
 package extract
 
-type ExtractController interface {
-}
-
-type Extractor interface {
-}
-
 /*
    Entity Extraction steps:
    - Initiatize queue
@@ -24,3 +18,50 @@ type Extractor interface {
           and new entities into table `unique_entities`
    - Repeat for a new batch
 */
+
+/*
+   Ref:
+      https://www.opsdash.com/blog/job-queues-in-go.html
+*/
+
+import (
+	ctx "context"
+	"enews/pkg/db"
+	nlp "enews/pkg/nlp/vn"
+	"enews/pkg/queue"
+	"log"
+)
+
+// Extract extracts entities from article
+func Extract() {
+	// Get articles
+	edb := db.Connect()
+
+	articles, err := edb.GetArticle_Limit(ctx.Background(), 3)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize an ArticleQueue
+	var q = queue.NewQueue()
+
+	for _, a := range articles {
+		q.Enqueue(a)
+	}
+
+	// Initialize NLP service
+	var s = nlp.NewVnNLPServer()
+
+	// Extract entities from articles
+	for q.IsEmpty() == false {
+		a := q.Dequeue()
+		if a == nil {
+			break
+		}
+		content := a.(db.Article).Content.String
+		parsed := s.Ner(content)
+
+		log.Println("NER: ", parsed)
+	}
+}

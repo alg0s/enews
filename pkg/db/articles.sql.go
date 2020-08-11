@@ -48,14 +48,49 @@ func (q *Queries) DeleteArticle(ctx context.Context, id int32) error {
 	return err
 }
 
-const getArticle = `-- name: GetArticle :many
+const getArticleByID = `-- name: GetArticleByID :many
 SELECT id, src_id, title, content, created_at
 FROM articles 
 WHERE id = $1
 `
 
-func (q *Queries) GetArticle(ctx context.Context, id int32) ([]Article, error) {
-	rows, err := q.query(ctx, q.getArticleStmt, getArticle, id)
+func (q *Queries) GetArticleByID(ctx context.Context, id int32) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticleByIDStmt, getArticleByID, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Article
+	for rows.Next() {
+		var i Article
+		if err := rows.Scan(
+			&i.ID,
+			&i.SrcID,
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getArticle_Limit = `-- name: GetArticle_Limit :many
+SELECT id, src_id, title, content, created_at 
+FROM articles 
+LIMIT $1
+`
+
+func (q *Queries) GetArticle_Limit(ctx context.Context, limit int32) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticle_LimitStmt, getArticle_Limit, limit)
 	if err != nil {
 		return nil, err
 	}

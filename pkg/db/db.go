@@ -28,8 +28,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteArticleStmt, err = db.PrepareContext(ctx, deleteArticle); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteArticle: %w", err)
 	}
-	if q.getArticleStmt, err = db.PrepareContext(ctx, getArticle); err != nil {
-		return nil, fmt.Errorf("error preparing query GetArticle: %w", err)
+	if q.getArticleByIDStmt, err = db.PrepareContext(ctx, getArticleByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticleByID: %w", err)
+	}
+	if q.getArticle_LimitStmt, err = db.PrepareContext(ctx, getArticle_Limit); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticle_Limit: %w", err)
 	}
 	if q.getRawArticleStmt, err = db.PrepareContext(ctx, getRawArticle); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRawArticle: %w", err)
@@ -58,9 +61,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteArticleStmt: %w", cerr)
 		}
 	}
-	if q.getArticleStmt != nil {
-		if cerr := q.getArticleStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getArticleStmt: %w", cerr)
+	if q.getArticleByIDStmt != nil {
+		if cerr := q.getArticleByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticleByIDStmt: %w", cerr)
+		}
+	}
+	if q.getArticle_LimitStmt != nil {
+		if cerr := q.getArticle_LimitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticle_LimitStmt: %w", cerr)
 		}
 	}
 	if q.getRawArticleStmt != nil {
@@ -124,7 +132,8 @@ type Queries struct {
 	tx                      *sql.Tx
 	createArticleStmt       *sql.Stmt
 	deleteArticleStmt       *sql.Stmt
-	getArticleStmt          *sql.Stmt
+	getArticleByIDStmt      *sql.Stmt
+	getArticle_LimitStmt    *sql.Stmt
 	getRawArticleStmt       *sql.Stmt
 	getRawArticle_LimitStmt *sql.Stmt
 	listArticlesStmt        *sql.Stmt
@@ -137,7 +146,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                      tx,
 		createArticleStmt:       q.createArticleStmt,
 		deleteArticleStmt:       q.deleteArticleStmt,
-		getArticleStmt:          q.getArticleStmt,
+		getArticleByIDStmt:      q.getArticleByIDStmt,
+		getArticle_LimitStmt:    q.getArticle_LimitStmt,
 		getRawArticleStmt:       q.getRawArticleStmt,
 		getRawArticle_LimitStmt: q.getRawArticle_LimitStmt,
 		listArticlesStmt:        q.listArticlesStmt,

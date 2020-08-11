@@ -12,7 +12,7 @@ import (
 // TODO: - add db engine verification
 
 // Conn returns a sql.DB connection that connects to the database in user settings `configs.json`
-func Conn() *sql.DB {
+func conn() *sql.DB {
 	var conf = utils.LoadConfigs().Database
 	var dsn = fmt.Sprintf(`host=%s port=%s user=%s dbname=%s sslmode=disable`,
 		conf.Host,
@@ -25,4 +25,10 @@ func Conn() *sql.DB {
 		log.Fatal(err)
 	}
 	return conn
+}
+
+// Connect makes a connection to the db and provides a db object
+func Connect() *Queries {
+	var c = conn()
+	return New(c)
 }

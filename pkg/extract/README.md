@@ -1,5 +1,14 @@
 # enews Extractor
 
+## Introduction
+Extractor extracts entities from text. Each entity will come with an entity type, such as PER-PERSON, LOC-LOCATION, or ORG-ORGANIZATION. 
+
+Extractors have the following components:
+- Controller 
+- ArticleQueue
+- Workers 
+- Ingestor
+
 ## Workflow
 Entity Extraction steps:
 - Initiatize queue

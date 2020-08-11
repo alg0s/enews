@@ -1,7 +1,13 @@
--- name: GetArticle :many
+-- name: GetArticleByID :many
 SELECT *
 FROM articles 
 WHERE id = $1 
+;
+
+-- name: GetArticle_Limit :many 
+SELECT * 
+FROM articles 
+LIMIT $1
 ;
 
 -- name: ListArticles :many
@@ -17,10 +23,12 @@ INSERT INTO articles (
 ) VALUES (
   	$1, $2, $3
 )
-RETURNING *;
+RETURNING *
+;
 
 -- name: DeleteArticle :exec
 DELETE FROM articles
-WHERE id = $1;
+WHERE id = $1
+;
 
 

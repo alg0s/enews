@@ -1,6 +1,4 @@
-// @author: goodalg0s@gmail.com
-
-package nlp
+package vn
 
 /*
    TODO:
@@ -18,12 +16,14 @@ package nlp
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -36,8 +36,8 @@ const (
 	defaultHost        string = `127.0.0.1`
 	defaultPort        string = `9000`
 	defaultAnnotators  string = `wseg,pos,ner,parse`
-	serverJarFile      string = `vncorenlp/VnCoreNLPServer.jar`
-	nlpJarFile         string = `vncorenlp/VnCoreNLP-1.1.1.jar`
+	serverJarFile      string = `pkg/nlp/vn/vncorenlp/VnCoreNLPServer.jar`
+	nlpJarFile         string = `pkg/nlp/vn/vncorenlp/VnCoreNLP-1.1.1.jar`
 )
 
 // Token details of an extract entity
@@ -66,7 +66,7 @@ type ServerResponse struct {
 type VnNLPServer struct {
 	Address     string
 	Process     *os.Process
-	IsAlive     bool
+	isAlive     bool
 	Port        string
 	Host        string
 	MaxHeapSize string
@@ -122,35 +122,52 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 	}
 
 	// 1. check if a server is running on that host
-	var address = `http://` + host + `:` + port
+	var address = strings.Join([]string{`http://`, host, `:`, port}, ``)
 	log.Println("Address of Server is: ", address)
 
 	resp, err := http.Get(address)
+
 	if err != nil {
 		log.Println("Server Not Active: ", err)
-	}
+	} else {
+		defer resp.Body.Close()
 
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		log.Println(`Server is already running on port: `, port)
-		s.IsAlive = true
-		s.Address = address
-		s.Port = port
-		s.Host = host
-		s.MaxHeapSize = maxHeapSize
-		s.Annotators = s.getAnnotators()
-		return true
+		if resp.StatusCode == http.StatusOK {
+			log.Println(`Server is already running on port: `, port)
+			s.isAlive = true
+			s.Address = address
+			s.Port = port
+			s.Host = host
+			s.MaxHeapSize = maxHeapSize
+			s.Annotators = s.getAnnotators()
+			return true
+		}
 	}
 
 	// 2. if no server is running, init new
 	log.Println(`Starting server...`)
+
+	serverJarFilePath, err := filepath.Abs(serverJarFile)
+
+	if err != nil {
+		log.Fatal("Unable to find VnNLPServer Jar file", err)
+	}
+
+	nlpJarFilePath, err := filepath.Abs(nlpJarFile)
+
+	if err != nil {
+		log.Fatal("Unable to find NLP Jar file", err)
+	}
+
 	var args = []string{
 		maxHeapSize,
-		`-jar`, serverJarFile, nlpJarFile,
+		`-jar`, serverJarFilePath, nlpJarFilePath,
 		`-i`, host,
 		`-p`, port,
 		`-a`, annotators,
 	}
+
+	log.Println("Cmd Args: ", strings.Join(args, ` `))
 
 	cmd := exec.Command(`java`, args...)
 	cmd.Stdout = os.Stdout
@@ -167,19 +184,18 @@ func (s *VnNLPServer) Start(host string, port string, maxHeapSize string, annota
 	time.Sleep(time.Second * 5)
 
 	s.Process = cmd.Process
-	s.Address = `http://` + host + `:` + port
-	s.IsAlive = true
+	s.Address = strings.Join([]string{`http://`, host, `:`, port}, ``)
+	s.isAlive = true
 	return true
 }
 
 // Stop kills the process currently running VnNLPServer and returns true if successful, otherwise false
-func (s *VnNLPServer) Stop() bool {
+func (s *VnNLPServer) Stop() (bool, error) {
 	err := s.Process.Kill()
 	if err != nil {
-		log.Println("Unable to Kill: ", err)
-		return false
+		return false, errors.New("Unable to Kill Existing VnNLPServer")
 	}
-	return true
+	return true, nil
 }
 
 // KillExistingServer kills the existing process running the VnNLPServer
@@ -217,7 +233,7 @@ func (s *VnNLPServer) KillExistingServer() bool {
 
 // getAnnotators gets the annotators registered with the Server
 func (s *VnNLPServer) getAnnotators() string {
-	resp, err := http.Get(s.Address + `/annotators`)
+	resp, err := http.Get(strings.Join([]string{s.Address, `/annotators`}, ``))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -244,7 +260,7 @@ func (s *VnNLPServer) Annotate(textInput string, annotators string) *ServerRespo
 	}
 
 	// construct URL
-	urlStr := s.Address + `/handle`
+	urlStr := strings.Join([]string{s.Address, `/handle`}, ``)
 	u, _ := url.Parse(urlStr)
 	query, _ := url.ParseQuery(u.RawQuery)
 	query.Add(`text`, textInput)
@@ -314,6 +330,22 @@ func (s *VnNLPServer) DetectLanguage(text string) string {
 // NewVnNLPServer initiates a new VnNLPServer instance
 func NewVnNLPServer() *VnNLPServer {
 	var s = VnNLPServer{}
-	s.Start("", "", "", "")
+	result := s.Start("", "", "", "")
+	log.Println("result start: ", result)
 	return &s
 }
+
+func Test() {
+	var s = NewVnNLPServer()
+	if s.IsServerAlive() == true {
+		s.Stop()
+	}
+	log.Println("Alive? ", s.IsServerAlive())
+	// var sample = `Theo Vietnam Airlines, hành khách xuống khỏi máy bay bằng xe thang, sau đó vấp ngã và bị chảy máu ở vùng đầu. Dù được cấp cứu với điều kiện tốt nhất tại Bệnh viện Quân y 175 tuy nhiên hành khách đã không qua khỏi.`
+	// result := s.Ner(sample)
+	// log.Println("Result: ", result)
+}
+
+// TODO: problems arised:
+// 1. Process didn't sleep to wait for startup
+// 2. Killed process raises errors

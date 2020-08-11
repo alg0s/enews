@@ -32,8 +32,6 @@ func LoadConfigs() *Configs {
 		log.Fatal("No path: ", err)
 	}
 
-	print("Config path: ", cpath)
-
 	data, err := ioutil.ReadFile(cpath)
 
 	if err != nil {
