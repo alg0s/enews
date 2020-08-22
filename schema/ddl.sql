@@ -31,6 +31,14 @@ CREATE TABLE extracted_articles (
     , UNIQUE(article_id)
 );
 
+-- Annotated_Articles stores annotated articles
+CREATE TABLE annotated_articles (
+    article_id INT NOT NULL 
+    , annotation    TEXT NOT NULL 
+    , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    , UNIQUE(article_id)
+)
+
 -- Stage_Extracted_Articles stores extracted articles and their entities temporarily, 
 -- acting as a staging table during the extraction process
 CREATE TABLE stage_extracted_articles (

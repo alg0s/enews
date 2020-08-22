@@ -1,0 +1,19 @@
+{
+	"database": {
+		"engine": "postgres",
+		"host": "localhost",
+		"port": "5432",
+		"dbname": "postgres",
+		"username": "steve",
+		"password": ""
+	},
+	"vnnlp": {
+		"maxHeapSize": "-Xmx2g",
+		"host": "127.0.0.1",
+		"port": "9000",
+		"annotators": "wseg,pos,ner,parse",
+		"configs": {
+			"stopAfterProgramQuit": false
+		}
+	}
+}

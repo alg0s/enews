@@ -1,4 +1,4 @@
--- name: GetArticleByID :many
+-- name: GetArticle_ByID :many
 SELECT *
 FROM articles 
 WHERE id = $1 
@@ -26,7 +26,7 @@ INSERT INTO articles (
 RETURNING *
 ;
 
--- name: DeleteArticle :exec
+-- name: DeleteArticle_ByID :exec
 DELETE FROM articles
 WHERE id = $1
 ;
