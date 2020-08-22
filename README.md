@@ -66,14 +66,26 @@ Enews provides a scheduling feature to automatically run extraction jobs on an h
 #### Configuring Logging
 
 ## Dependencies
-1. **sqlc**
+1. Java
+2. sqlc
 
 ## Development
 
 
 ## Test 
 
+## References
 
+   https://www.opsdash.com/blog/job-queues-in-go.html
+   https://bigkevmcd.github.io/go/pgrp/context/2019/02/19/terminating-processes-in-go.html
+   https://www.digitalocean.com/community/tutorials/understanding-data-types-in-go
+   https://deployeveryday.com/2019/10/21/python-idioms-go.html
+   https://golang.org/doc/codewalk/sharemem/
+   https://www.ardanlabs.com/blog/2017/10/the-behavior-of-channels.html  
+   https://go101.org/article/channel-use-cases.html 
+   https://golang.org/doc/effective_go.html#concurrency
+   https://blog.gopheracademy.com/composable-pipelines-pattern/
+   https://www.prakharsrivastav.com/posts/golang-concurrent-worker-pool/
 
 
 <!--
