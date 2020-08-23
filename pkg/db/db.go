@@ -22,17 +22,44 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.createAnnotatedArticleStmt, err = db.PrepareContext(ctx, createAnnotatedArticle); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateAnnotatedArticle: %w", err)
+	}
 	if q.createArticleStmt, err = db.PrepareContext(ctx, createArticle); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateArticle: %w", err)
 	}
-	if q.deleteArticleStmt, err = db.PrepareContext(ctx, deleteArticle); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteArticle: %w", err)
+	if q.createArticleEntitiesStmt, err = db.PrepareContext(ctx, createArticleEntities); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateArticleEntities: %w", err)
 	}
-	if q.getArticleByIDStmt, err = db.PrepareContext(ctx, getArticleByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetArticleByID: %w", err)
+	if q.createManyArticlesStmt, err = db.PrepareContext(ctx, createManyArticles); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateManyArticles: %w", err)
 	}
-	if q.getArticle_LimitStmt, err = db.PrepareContext(ctx, getArticle_Limit); err != nil {
-		return nil, fmt.Errorf("error preparing query GetArticle_Limit: %w", err)
+	if q.createStageExtractedEntityStmt, err = db.PrepareContext(ctx, createStageExtractedEntity); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateStageExtractedEntity: %w", err)
+	}
+	if q.createUniqueEntityStmt, err = db.PrepareContext(ctx, createUniqueEntity); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUniqueEntity: %w", err)
+	}
+	if q.getAnnotatedArticlesStmt, err = db.PrepareContext(ctx, getAnnotatedArticles); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnnotatedArticles: %w", err)
+	}
+	if q.getAnnotatedArticles_ByIDStmt, err = db.PrepareContext(ctx, getAnnotatedArticles_ByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAnnotatedArticles_ByID: %w", err)
+	}
+	if q.getArticleEntities_ByArticleIDStmt, err = db.PrepareContext(ctx, getArticleEntities_ByArticleID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticleEntities_ByArticleID: %w", err)
+	}
+	if q.getArticle_ByIDStmt, err = db.PrepareContext(ctx, getArticle_ByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticle_ByID: %w", err)
+	}
+	if q.getArticlesStmt, err = db.PrepareContext(ctx, getArticles); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticles: %w", err)
+	}
+	if q.getArticles_LimitStmt, err = db.PrepareContext(ctx, getArticles_Limit); err != nil {
+		return nil, fmt.Errorf("error preparing query GetArticles_Limit: %w", err)
+	}
+	if q.getEntityType_ByNameStmt, err = db.PrepareContext(ctx, getEntityType_ByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEntityType_ByName: %w", err)
 	}
 	if q.getRawArticleStmt, err = db.PrepareContext(ctx, getRawArticle); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRawArticle: %w", err)
@@ -40,8 +67,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getRawArticle_LimitStmt, err = db.PrepareContext(ctx, getRawArticle_Limit); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRawArticle_Limit: %w", err)
 	}
-	if q.listArticlesStmt, err = db.PrepareContext(ctx, listArticles); err != nil {
-		return nil, fmt.Errorf("error preparing query ListArticles: %w", err)
+	if q.getStageExtractedEntities_ByArticleIDStmt, err = db.PrepareContext(ctx, getStageExtractedEntities_ByArticleID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStageExtractedEntities_ByArticleID: %w", err)
+	}
+	if q.getUniqueEntities_ByEntityTypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByEntityType); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByEntityType: %w", err)
+	}
+	if q.getUniqueEntities_ByNameStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByName: %w", err)
+	}
+	if q.getUniqueEntities_ByName_EntityTypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByName_EntityType); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByName_EntityType: %w", err)
 	}
 	if q.listRawArticlesStmt, err = db.PrepareContext(ctx, listRawArticles); err != nil {
 		return nil, fmt.Errorf("error preparing query ListRawArticles: %w", err)
@@ -51,24 +87,69 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.createAnnotatedArticleStmt != nil {
+		if cerr := q.createAnnotatedArticleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createAnnotatedArticleStmt: %w", cerr)
+		}
+	}
 	if q.createArticleStmt != nil {
 		if cerr := q.createArticleStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createArticleStmt: %w", cerr)
 		}
 	}
-	if q.deleteArticleStmt != nil {
-		if cerr := q.deleteArticleStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteArticleStmt: %w", cerr)
+	if q.createArticleEntitiesStmt != nil {
+		if cerr := q.createArticleEntitiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createArticleEntitiesStmt: %w", cerr)
 		}
 	}
-	if q.getArticleByIDStmt != nil {
-		if cerr := q.getArticleByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getArticleByIDStmt: %w", cerr)
+	if q.createManyArticlesStmt != nil {
+		if cerr := q.createManyArticlesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createManyArticlesStmt: %w", cerr)
 		}
 	}
-	if q.getArticle_LimitStmt != nil {
-		if cerr := q.getArticle_LimitStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getArticle_LimitStmt: %w", cerr)
+	if q.createStageExtractedEntityStmt != nil {
+		if cerr := q.createStageExtractedEntityStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createStageExtractedEntityStmt: %w", cerr)
+		}
+	}
+	if q.createUniqueEntityStmt != nil {
+		if cerr := q.createUniqueEntityStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUniqueEntityStmt: %w", cerr)
+		}
+	}
+	if q.getAnnotatedArticlesStmt != nil {
+		if cerr := q.getAnnotatedArticlesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnnotatedArticlesStmt: %w", cerr)
+		}
+	}
+	if q.getAnnotatedArticles_ByIDStmt != nil {
+		if cerr := q.getAnnotatedArticles_ByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAnnotatedArticles_ByIDStmt: %w", cerr)
+		}
+	}
+	if q.getArticleEntities_ByArticleIDStmt != nil {
+		if cerr := q.getArticleEntities_ByArticleIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticleEntities_ByArticleIDStmt: %w", cerr)
+		}
+	}
+	if q.getArticle_ByIDStmt != nil {
+		if cerr := q.getArticle_ByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticle_ByIDStmt: %w", cerr)
+		}
+	}
+	if q.getArticlesStmt != nil {
+		if cerr := q.getArticlesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticlesStmt: %w", cerr)
+		}
+	}
+	if q.getArticles_LimitStmt != nil {
+		if cerr := q.getArticles_LimitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getArticles_LimitStmt: %w", cerr)
+		}
+	}
+	if q.getEntityType_ByNameStmt != nil {
+		if cerr := q.getEntityType_ByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEntityType_ByNameStmt: %w", cerr)
 		}
 	}
 	if q.getRawArticleStmt != nil {
@@ -81,9 +162,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getRawArticle_LimitStmt: %w", cerr)
 		}
 	}
-	if q.listArticlesStmt != nil {
-		if cerr := q.listArticlesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing listArticlesStmt: %w", cerr)
+	if q.getStageExtractedEntities_ByArticleIDStmt != nil {
+		if cerr := q.getStageExtractedEntities_ByArticleIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStageExtractedEntities_ByArticleIDStmt: %w", cerr)
+		}
+	}
+	if q.getUniqueEntities_ByEntityTypeStmt != nil {
+		if cerr := q.getUniqueEntities_ByEntityTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUniqueEntities_ByEntityTypeStmt: %w", cerr)
+		}
+	}
+	if q.getUniqueEntities_ByNameStmt != nil {
+		if cerr := q.getUniqueEntities_ByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUniqueEntities_ByNameStmt: %w", cerr)
+		}
+	}
+	if q.getUniqueEntities_ByName_EntityTypeStmt != nil {
+		if cerr := q.getUniqueEntities_ByName_EntityTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUniqueEntities_ByName_EntityTypeStmt: %w", cerr)
 		}
 	}
 	if q.listRawArticlesStmt != nil {
@@ -128,29 +224,53 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                      DBTX
-	tx                      *sql.Tx
-	createArticleStmt       *sql.Stmt
-	deleteArticleStmt       *sql.Stmt
-	getArticleByIDStmt      *sql.Stmt
-	getArticle_LimitStmt    *sql.Stmt
-	getRawArticleStmt       *sql.Stmt
-	getRawArticle_LimitStmt *sql.Stmt
-	listArticlesStmt        *sql.Stmt
-	listRawArticlesStmt     *sql.Stmt
+	db                                        DBTX
+	tx                                        *sql.Tx
+	createAnnotatedArticleStmt                *sql.Stmt
+	createArticleStmt                         *sql.Stmt
+	createArticleEntitiesStmt                 *sql.Stmt
+	createManyArticlesStmt                    *sql.Stmt
+	createStageExtractedEntityStmt            *sql.Stmt
+	createUniqueEntityStmt                    *sql.Stmt
+	getAnnotatedArticlesStmt                  *sql.Stmt
+	getAnnotatedArticles_ByIDStmt             *sql.Stmt
+	getArticleEntities_ByArticleIDStmt        *sql.Stmt
+	getArticle_ByIDStmt                       *sql.Stmt
+	getArticlesStmt                           *sql.Stmt
+	getArticles_LimitStmt                     *sql.Stmt
+	getEntityType_ByNameStmt                  *sql.Stmt
+	getRawArticleStmt                         *sql.Stmt
+	getRawArticle_LimitStmt                   *sql.Stmt
+	getStageExtractedEntities_ByArticleIDStmt *sql.Stmt
+	getUniqueEntities_ByEntityTypeStmt        *sql.Stmt
+	getUniqueEntities_ByNameStmt              *sql.Stmt
+	getUniqueEntities_ByName_EntityTypeStmt   *sql.Stmt
+	listRawArticlesStmt                       *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                      tx,
-		tx:                      tx,
-		createArticleStmt:       q.createArticleStmt,
-		deleteArticleStmt:       q.deleteArticleStmt,
-		getArticleByIDStmt:      q.getArticleByIDStmt,
-		getArticle_LimitStmt:    q.getArticle_LimitStmt,
-		getRawArticleStmt:       q.getRawArticleStmt,
-		getRawArticle_LimitStmt: q.getRawArticle_LimitStmt,
-		listArticlesStmt:        q.listArticlesStmt,
-		listRawArticlesStmt:     q.listRawArticlesStmt,
+		db:                                        tx,
+		tx:                                        tx,
+		createAnnotatedArticleStmt:                q.createAnnotatedArticleStmt,
+		createArticleStmt:                         q.createArticleStmt,
+		createArticleEntitiesStmt:                 q.createArticleEntitiesStmt,
+		createManyArticlesStmt:                    q.createManyArticlesStmt,
+		createStageExtractedEntityStmt:            q.createStageExtractedEntityStmt,
+		createUniqueEntityStmt:                    q.createUniqueEntityStmt,
+		getAnnotatedArticlesStmt:                  q.getAnnotatedArticlesStmt,
+		getAnnotatedArticles_ByIDStmt:             q.getAnnotatedArticles_ByIDStmt,
+		getArticleEntities_ByArticleIDStmt:        q.getArticleEntities_ByArticleIDStmt,
+		getArticle_ByIDStmt:                       q.getArticle_ByIDStmt,
+		getArticlesStmt:                           q.getArticlesStmt,
+		getArticles_LimitStmt:                     q.getArticles_LimitStmt,
+		getEntityType_ByNameStmt:                  q.getEntityType_ByNameStmt,
+		getRawArticleStmt:                         q.getRawArticleStmt,
+		getRawArticle_LimitStmt:                   q.getRawArticle_LimitStmt,
+		getStageExtractedEntities_ByArticleIDStmt: q.getStageExtractedEntities_ByArticleIDStmt,
+		getUniqueEntities_ByEntityTypeStmt:        q.getUniqueEntities_ByEntityTypeStmt,
+		getUniqueEntities_ByNameStmt:              q.getUniqueEntities_ByNameStmt,
+		getUniqueEntities_ByName_EntityTypeStmt:   q.getUniqueEntities_ByName_EntityTypeStmt,
+		listRawArticlesStmt:                       q.listRawArticlesStmt,
 	}
 }

@@ -8,13 +8,25 @@ import (
 )
 
 type Querier interface {
-	CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error)
-	DeleteArticle(ctx context.Context, id int32) error
-	GetArticleByID(ctx context.Context, id int32) ([]Article, error)
-	GetArticle_Limit(ctx context.Context, limit int32) ([]Article, error)
+	CreateAnnotatedArticle(ctx context.Context, arg CreateAnnotatedArticleParams) error
+	CreateArticle(ctx context.Context, arg CreateArticleParams) error
+	CreateArticleEntities(ctx context.Context, arg CreateArticleEntitiesParams) error
+	CreateManyArticles(ctx context.Context, id int32) error
+	CreateStageExtractedEntity(ctx context.Context, arg CreateStageExtractedEntityParams) error
+	CreateUniqueEntity(ctx context.Context, arg CreateUniqueEntityParams) error
+	GetAnnotatedArticles(ctx context.Context) ([]AnnotatedArticle, error)
+	GetAnnotatedArticles_ByID(ctx context.Context, articleID int32) (AnnotatedArticle, error)
+	GetArticleEntities_ByArticleID(ctx context.Context, articleID int32) ([]ArticleEntity, error)
+	GetArticle_ByID(ctx context.Context, id int32) ([]Article, error)
+	GetArticles(ctx context.Context) ([]Article, error)
+	GetArticles_Limit(ctx context.Context, limit int32) ([]Article, error)
+	GetEntityType_ByName(ctx context.Context, name string) (EntityType, error)
 	GetRawArticle(ctx context.Context, addedID sql.NullString) ([]EnewsRawArticle, error)
 	GetRawArticle_Limit(ctx context.Context, limit int32) ([]EnewsRawArticle, error)
-	ListArticles(ctx context.Context) ([]Article, error)
+	GetStageExtractedEntities_ByArticleID(ctx context.Context, articleID int32) ([]StageExtractedEntity, error)
+	GetUniqueEntities_ByEntityType(ctx context.Context, entityTypeID sql.NullInt32) ([]UniqueEntity, error)
+	GetUniqueEntities_ByName(ctx context.Context, name sql.NullString) ([]UniqueEntity, error)
+	GetUniqueEntities_ByName_EntityType(ctx context.Context, arg GetUniqueEntities_ByName_EntityTypeParams) (UniqueEntity, error)
 	ListRawArticles(ctx context.Context) ([]EnewsRawArticle, error)
 }
 

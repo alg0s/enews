@@ -8,7 +8,7 @@ import (
 	"database/sql"
 )
 
-const createArticle = `-- name: CreateArticle :one
+const createArticle = `-- name: CreateArticle :exec
 INSERT INTO articles (
 	src_id
   	, title
@@ -25,37 +25,36 @@ type CreateArticleParams struct {
 	Content sql.NullString `json:"content"`
 }
 
-func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
-	row := q.queryRow(ctx, q.createArticleStmt, createArticle, arg.SrcID, arg.Title, arg.Content)
-	var i Article
-	err := row.Scan(
-		&i.ID,
-		&i.SrcID,
-		&i.Title,
-		&i.Content,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) error {
+	_, err := q.exec(ctx, q.createArticleStmt, createArticle, arg.SrcID, arg.Title, arg.Content)
+	return err
 }
 
-const deleteArticle = `-- name: DeleteArticle :exec
+const createManyArticles = `-- name: CreateManyArticles :exec
+
 DELETE FROM articles
 WHERE id = $1
 `
 
-func (q *Queries) DeleteArticle(ctx context.Context, id int32) error {
-	_, err := q.exec(ctx, q.deleteArticleStmt, deleteArticle, id)
+// INSERT INTO articles (
+// 	src_id
+// 	, title
+// 	, content
+// ) VALUES $1
+// ;
+func (q *Queries) CreateManyArticles(ctx context.Context, id int32) error {
+	_, err := q.exec(ctx, q.createManyArticlesStmt, createManyArticles, id)
 	return err
 }
 
-const getArticleByID = `-- name: GetArticleByID :many
+const getArticle_ByID = `-- name: GetArticle_ByID :many
 SELECT id, src_id, title, content, created_at
 FROM articles 
 WHERE id = $1
 `
 
-func (q *Queries) GetArticleByID(ctx context.Context, id int32) ([]Article, error) {
-	rows, err := q.query(ctx, q.getArticleByIDStmt, getArticleByID, id)
+func (q *Queries) GetArticle_ByID(ctx context.Context, id int32) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticle_ByIDStmt, getArticle_ByID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -83,48 +82,48 @@ func (q *Queries) GetArticleByID(ctx context.Context, id int32) ([]Article, erro
 	return items, nil
 }
 
-const getArticle_Limit = `-- name: GetArticle_Limit :many
+const getArticles = `-- name: GetArticles :many
+SELECT id, src_id, title, content, created_at
+FROM articles
+`
+
+func (q *Queries) GetArticles(ctx context.Context) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticlesStmt, getArticles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Article
+	for rows.Next() {
+		var i Article
+		if err := rows.Scan(
+			&i.ID,
+			&i.SrcID,
+			&i.Title,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getArticles_Limit = `-- name: GetArticles_Limit :many
 SELECT id, src_id, title, content, created_at 
 FROM articles 
 LIMIT $1
 `
 
-func (q *Queries) GetArticle_Limit(ctx context.Context, limit int32) ([]Article, error) {
-	rows, err := q.query(ctx, q.getArticle_LimitStmt, getArticle_Limit, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Article
-	for rows.Next() {
-		var i Article
-		if err := rows.Scan(
-			&i.ID,
-			&i.SrcID,
-			&i.Title,
-			&i.Content,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listArticles = `-- name: ListArticles :many
-SELECT id, src_id, title, content, created_at 
-FROM articles
-`
-
-func (q *Queries) ListArticles(ctx context.Context) ([]Article, error) {
-	rows, err := q.query(ctx, q.listArticlesStmt, listArticles)
+func (q *Queries) GetArticles_Limit(ctx context.Context, limit int32) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticles_LimitStmt, getArticles_Limit, limit)
 	if err != nil {
 		return nil, err
 	}
