@@ -4,18 +4,18 @@ FROM articles
 WHERE id = $1 
 ;
 
--- name: GetArticle_Limit :many 
+-- name: GetArticles_Limit :many 
 SELECT * 
 FROM articles 
 LIMIT $1
 ;
 
--- name: ListArticles :many
-SELECT * 
+-- name: GetArticles :many
+SELECT *
 FROM articles 
 ;
 
--- name: CreateArticle :one 
+-- name: CreateArticle :exec
 INSERT INTO articles (
 	src_id
   	, title
@@ -25,6 +25,14 @@ INSERT INTO articles (
 )
 RETURNING *
 ;
+
+-- name: CreateManyArticles :exec
+-- INSERT INTO articles (
+-- 	src_id
+-- 	, title
+-- 	, content
+-- ) VALUES $1
+-- ;
 
 -- name: DeleteArticle_ByID :exec
 DELETE FROM articles

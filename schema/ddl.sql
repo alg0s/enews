@@ -20,28 +20,28 @@ CREATE TABLE articles (
 );
 
 
--- Extracted_Articles stores extracted entities, playing a role of archiving
-CREATE TABLE extracted_articles (
-    id              SERIAL PRIMARY KEY
-    , article_id    INT NOT NULL
-    , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    , FOREIGN KEY (article_id) 
-        REFERENCES articles(id)
-        ON DELETE CASCADE
-    , UNIQUE(article_id)
-);
+-- Extracted_Articles stores extracted entities, playing a role of archiving article IDs
+-- CREATE TABLE extracted_articles (
+--     id              SERIAL PRIMARY KEY
+--     , article_id    INT NOT NULL
+--     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+--     , FOREIGN KEY (article_id) 
+--         REFERENCES articles(id)
+--         ON DELETE CASCADE
+--     , UNIQUE(article_id)
+-- );
 
--- Annotated_Articles stores annotated articles
+-- Annotated_Articles stores annotated articles and individual entities
 CREATE TABLE annotated_articles (
     article_id INT NOT NULL 
     , annotation    TEXT NOT NULL 
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     , UNIQUE(article_id)
-)
+);
 
 -- Stage_Extracted_Articles stores extracted articles and their entities temporarily, 
 -- acting as a staging table during the extraction process
-CREATE TABLE stage_extracted_articles (
+CREATE TABLE stage_extracted_entities (
     article_id      INT NOT NULL 
     , entity        TEXT
     , entity_type   VARCHAR(250)
@@ -49,6 +49,7 @@ CREATE TABLE stage_extracted_articles (
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Article_Entities persists the entities extracted from each article
 CREATE TABLE article_entities (
     id              SERIAL
     , article_id    INT NOT NULL
@@ -62,17 +63,19 @@ CREATE TABLE article_entities (
     , UNIQUE(article_id, entity, entity_type)
 );
 
+-- Entity_Types persists the types of entities that could be extracted by NLP services
 CREATE TABLE entity_types (
     id              SERIAL PRIMARY KEY
     , name          VARCHAR(250) NOT NULL
     , description   TEXT  
+    , language      VARCHAR(50) NOT NULL
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     , UNIQUE(name)
 );
 
 CREATE TABLE unique_entities (
     id                  SERIAL 
-    , name              TEXT 
+    , name              TEXT
     , entity_type_id    INT 
     , created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     , FOREIGN KEY (entity_type_id) 
@@ -80,8 +83,6 @@ CREATE TABLE unique_entities (
         ON DELETE CASCADE
     , UNIQUE(name, entity_type_id)
 );
-
-
 
 
 /** 
