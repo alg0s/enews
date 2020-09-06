@@ -11,6 +11,8 @@ package vn
 /*
    Shortcuts:
 	lsof -t -i :9000 -s TCP:LISTEN -c java
+
+	// java -Xmx2g -jar /Users/steve/Documents/enews/pkg/nlp/vn/vncorenlp/VnCoreNLPServer.jar /Users/steve/Documents/enews/pkg/nlp/vn/vncorenlp/VnCoreNLP-1.1.1.jar -i 127.0.0.1 -p 9000 -a wseg,pos,ner,parse
 */
 
 import (

@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type AnnotatedArticle struct {
+	ArticleID  int32     `json:"article_id"`
+	Annotation string    `json:"annotation"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type Article struct {
 	ID        int32          `json:"id"`
 	SrcID     string         `json:"src_id"`
@@ -53,16 +59,11 @@ type EntityType struct {
 	ID          int32          `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
+	Language    string         `json:"language"`
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
-type ExtractedArticle struct {
-	ID        int32     `json:"id"`
-	ArticleID int32     `json:"article_id"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type StageExtractedArticle struct {
+type StageExtractedEntity struct {
 	ArticleID  int32          `json:"article_id"`
 	Entity     sql.NullString `json:"entity"`
 	EntityType sql.NullString `json:"entity_type"`

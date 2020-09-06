@@ -1,4 +1,4 @@
-package settings
+package configs
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-const settingPath = `settings/settings.json`
+const settingPath = `configs/configs.json`
 
 // Database represents database configs
 type Database struct {
@@ -21,7 +21,8 @@ type Database struct {
 
 // VnNLPConfigs represents optional configs of VnNLP
 type VnNLPConfigs struct {
-	StopAfterProgramQuit bool `json:"stopAfterProgramQuit"`
+	StopAfterProgramQuit  bool `json:"stopAfterProgramQuit"`
+	NumberArticlePerBatch int  `json:"numberArticlePerbatch"`
 }
 
 // VnNLP represents VnNLP server configs
@@ -33,30 +34,28 @@ type VnNLP struct {
 	VnNLPConfigs `json:"configs"`
 }
 
-// Settings represents configs.json
-type Settings struct {
+// Configs represents configs.json
+type Configs struct {
 	Database `json:"database"`
 	VnNLP    `json:"vnnlp"`
 }
 
-// LoadSettings loads user settings from `configs/configs.json` and returns a Configs object
-func LoadSettings() *Settings {
+// LoadConfigs loads user configs from `configs/configs.json` and returns a Configs object
+func LoadConfigs() *Configs {
 	var cpath, err = filepath.Abs(settingPath)
-
 	if err != nil {
 		log.Fatal("No path: ", err)
 	}
 
 	data, err := ioutil.ReadFile(cpath)
-
 	if err != nil {
 		log.Fatal("Unable to read config file: ", err)
 	}
 
-	var settings Settings
-	err = json.Unmarshal(data, &settings)
+	var configs Configs
+	err = json.Unmarshal(data, &configs)
 	if err != nil {
 		log.Fatal("Unable to marshal json: ", err)
 	}
-	return &settings
+	return &configs
 }

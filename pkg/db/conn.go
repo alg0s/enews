@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	utils "enews/pkg/utils"
+	"enews/pkg/configs"
 	"fmt"
 	"log"
 
@@ -13,13 +13,13 @@ import (
 
 // Conn returns a sql.DB connection that connects to the database in user settings `configs.json`
 func conn() *sql.DB {
-	var conf = utils.LoadConfigs().Database
+	var conf = configs.LoadConfigs().Database
 	var dsn = fmt.Sprintf(`host=%s port=%s user=%s dbname=%s sslmode=disable`,
 		conf.Host,
 		conf.Port,
 		conf.Username,
-		conf.Dbname)
-	log.Println("dsn: ", dsn)
+		conf.Dbname,
+	)
 	conn, err := sql.Open(conf.Engine, dsn)
 	if err != nil {
 		log.Fatal(err)

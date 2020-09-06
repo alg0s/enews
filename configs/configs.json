@@ -13,7 +13,8 @@
 		"port": "9000",
 		"annotators": "wseg,pos,ner,parse",
 		"configs": {
-			"stopAfterProgramQuit": false
+			"stopAfterProgramQuit": false,
+			"numberArticlePerBatch": 50
 		}
 	}
 }
