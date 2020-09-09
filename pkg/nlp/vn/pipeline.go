@@ -7,6 +7,7 @@ import (
 	"enews/pkg/configs"
 	"enews/pkg/db"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -33,10 +34,11 @@ func createArticleChannel(articles ...db.Article) <-chan *db.Article {
 	return out
 }
 
-func annotate(articles <-chan *db.Article) (<-chan *Annotation, <-chan *Annotation, <-chan *db.Article) {
-	out1 := make(chan *Annotation)
-	out2 := make(chan *Annotation)
-	failed := make(chan *db.Article)
+func annotate(articles <-chan *db.Article) (<-chan *Annotation, <-chan *Annotation, <-chan *db.Article, <-chan error) {
+	out1 := make(chan *Annotation)      // For Annotation
+	out2 := make(chan *Annotation)      // For Annotation
+	nilAnnots := make(chan *db.Article) // For nil annotation
+	errc := make(chan error, 1)         // For errors
 
 	// Create a client for NLP server
 	st := configs.LoadConfigs().VnNLP
@@ -45,14 +47,19 @@ func annotate(articles <-chan *db.Article) (<-chan *Annotation, <-chan *Annotati
 	go func() {
 		defer close(out1)
 		defer close(out2)
-		defer close(failed)
+		defer close(nilAnnots)
+		defer close(errc)
 		for a := range articles {
 			// TODO: handle empty content, probably in the SQL
 			content := a.Content.String
-			// content := a.Title.String
 			parsed, err := nlp.DepParse(content)
-			if err != nil || parsed == nil {
-				failed <- a
+
+			if err != nil {
+				if e, ok := err.(*Error); ok && e.Type == ErrorTypeNilAnnotation {
+					nilAnnots <- a
+				} else {
+					errc <- err
+				}
 			} else {
 				annot := Annotation{a.ID, parsed}
 				out1 <- &annot
@@ -60,7 +67,7 @@ func annotate(articles <-chan *db.Article) (<-chan *Annotation, <-chan *Annotati
 			}
 		}
 	}()
-	return out1, out2, failed
+	return out1, out2, nilAnnots, errc
 }
 
 func saveAnnotatedArticle(annotation <-chan *Annotation) <-chan error {
@@ -81,7 +88,11 @@ func saveAnnotatedArticle(annotation <-chan *Annotation) <-chan error {
 					},
 				)
 				if err != nil {
-					errc <- err
+					if !strings.Contains(err.Error(), "violates unique constraint") {
+						errc <- &Error{Type: ErrorTypeUniqueConstraintViolation, Err: err}
+					} else {
+						errc <- err
+					}
 				}
 			}
 		}
@@ -123,7 +134,6 @@ func saveStageExtractedEntities(entities <-chan *db.CreateStageExtractedEntityPa
 		for e := range entities {
 			err := edb.CreateStageExtractedEntity(ctx.Background(), *e)
 			if err != nil {
-				log.Println("Err: ", err)
 				errc <- err
 			}
 		}
@@ -131,20 +141,11 @@ func saveStageExtractedEntities(entities <-chan *db.CreateStageExtractedEntityPa
 	return errc
 }
 
-func handleFailed(articles <-chan *db.Article) {
-	go func() {
-		for a := range articles {
-			log.Println("\n FAILED article: ", a.Title.String)
-		}
-	}()
-}
-
 func mergeErrors(echans ...<-chan error) <-chan error {
 	var wg sync.WaitGroup
 	out := make(chan error, len(echans))
 	pickError := func(echan <-chan error) {
 		for e := range echan {
-			log.Println("1 err: ", e)
 			out <- e
 		}
 		wg.Done()
@@ -160,17 +161,27 @@ func mergeErrors(echans ...<-chan error) <-chan error {
 	return out
 }
 
+// TODO: implement this to handle large articles, not for now
+func handleNilAnnotation(articles <-chan *db.Article) {
+	go func() {
+		for a := range articles {
+			log.Println("\n Nil Annotation: ", a.ID, len(a.Content.String))
+		}
+	}()
+}
+
 // RunExtractPipeline is the main controller of the NLP pipeline
-func RunExtractPipeline() {
+func RunExtractPipeline() bool {
+	var errchans []<-chan error
+
 	numArticles := configs.LoadConfigs().VnNLP.VnNLPConfigs.NumberArticlePerBatch
 
 	batch := fetchArticles(numArticles)
 
 	achan := createArticleChannel(batch...)
 
-	annots1, annots2, failed := annotate(achan)
-
-	var errchans []<-chan error
+	annots1, annots2, nilAnnots, serverErrs := annotate(achan)
+	errchans = append(errchans, serverErrs)
 
 	errc1 := saveAnnotatedArticle(annots1)
 	errchans = append(errchans, errc1)
@@ -180,10 +191,36 @@ func RunExtractPipeline() {
 	errc2 := saveStageExtractedEntities(entities)
 	errchans = append(errchans, errc2)
 
-	handleFailed(failed)
+	handleNilAnnotation(nilAnnots)
 
 	errs := mergeErrors(errchans...)
-	for e := range errs {
-		log.Println(e)
+
+	numServerErrors := 0
+
+	for err := range errs {
+		log.Println(">>> ERR: ", err)
+		if err, ok := err.(*Error); ok {
+			switch err.Type {
+			case ErrorTypeRequestFailed:
+				numServerErrors++
+			case ErrorTypeServerNotResponding:
+				numServerErrors++
+			case ErrorTypeServerError:
+				numServerErrors++
+			}
+		}
 	}
+
+	if numServerErrors > 0 {
+		return false
+	}
+	return true
 }
+
+/** Thoughts **
+
+It is actually not bad to fail a pipeline once a stage fails. There are two main types of behaviors:
+First is acceptable failure which will be recorded but will not fail the pipeline.
+Second is unacceptable failure, for instance server not responding. It will fail the pipeline
+and signal the Main controller to do something with the server.
+*/

@@ -3,7 +3,6 @@ package vn
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,7 +46,7 @@ func DefaultClient() *NLPClient {
 func (c *NLPClient) Ping() bool {
 	var address = c.Address
 	if address == "" {
-		log.Panic("Missing Server Address")
+		// log.Panic("Missing Server Address")
 		return false
 	}
 
@@ -103,7 +102,8 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	contentType := `text/plain`
 	resp, err := http.Post(u.String(), contentType, nil)
 	if err != nil {
-		return nil, err
+		// return nil, err
+		return nil, &Error{Type: ErrorTypeServerError, Err: err}
 	}
 
 	defer resp.Body.Close()
@@ -118,15 +118,18 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	}
 
 	if sr.Error != "" {
-		return nil, errors.Errorf("Server error: %v", sr.Error)
+		return nil, &Error{Type: ErrorTypeServerError, Msg: sr.Error}
 	}
-	return nil, errors.Errorf("NLP Server Response: %v", resp.StatusCode)
+	return nil, &Error{Type: ErrorTypeRequestFailed, Msg: resp.Status}
 }
 
 func (c *NLPClient) customAnnotate(text string, annotators string) (*[]Sentence, error) {
 	result, err := c.annotate(text, annotators)
 	if err != nil {
 		return nil, err
+	}
+	if result.Sentences == nil {
+		return nil, &Error{Type: ErrorTypeNilAnnotation}
 	}
 	return &result.Sentences, nil
 }

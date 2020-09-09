@@ -47,6 +47,7 @@ CREATE TABLE stage_extracted_entities (
     , entity_type   VARCHAR(250)
     , counts        SMALLINT NOT NULL
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    , UNIQUE(article_id, entity, entity_type)
 );
 
 -- Article_Entities persists the entities extracted from each article

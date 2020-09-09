@@ -46,6 +46,7 @@ func runNLPServer(start, stop, reset chan bool) {
 			log.Println(`Restarting NLP server...`)
 			s.Stop()
 			restarted := s.Start()
+
 			// Let main know that the server has been restarted successfully
 			if restarted == true {
 				log.Println("NLP Server restarted successfully")
@@ -56,10 +57,20 @@ func runNLPServer(start, stop, reset chan bool) {
 }
 
 func work(extract, done chan bool) {
-	if <-extract {
-		log.Println("Start working....")
-		vn.RunExtractPipeline()
-		done <- true
+	for {
+		select {
+		case <-extract:
+			log.Println("Start working....")
+
+			switch vn.RunExtractPipeline() {
+			case false:
+				extract <- false
+			case true:
+				done <- true
+			}
+		case <-done:
+			return
+		}
 	}
 }
 
@@ -67,11 +78,11 @@ func work(extract, done chan bool) {
 func main() {
 	var start = make(chan bool)
 	var stop = make(chan bool)
-	var reset = make(chan bool)
+	var resetServer = make(chan bool)
 	var extract = make(chan bool)
 	var done = make(chan bool)
 
-	go runNLPServer(start, stop, reset)
+	go runNLPServer(start, stop, resetServer)
 	go work(extract, done)
 
 	start <- true
@@ -85,12 +96,16 @@ func main() {
 				log.Println("Unable to start NLP server. Shutdown.")
 				return
 			}
-		case finished := <-done:
-			log.Println("Work has finished: ", finished)
-			stop <- true
 		case issues := <-extract:
 			log.Println("Work has server issue: ", issues)
-			reset <- true
+			resetServer <- true
+		case <-resetServer:
+			log.Println("Reset successfully. Restart the pipeline...")
+			extract <- true
+		case finished := <-done:
+			log.Println("Work has finished: ", finished)
+			done <- true
+			stop <- true
 		case <-stop:
 			log.Println("Shutdown.")
 			return
