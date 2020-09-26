@@ -11,24 +11,19 @@ import (
 	"sync"
 )
 
-func fetchArticles(quantity int) []db.Article {
-	edb := db.Connect()
-	articles, err := edb.GetArticles_Limit(ctx.Background(), int32(quantity))
-	log.Println("Total articles in batch: ", len(articles))
-	if err != nil {
-		log.Fatal(err)
-		return nil
-	}
-	return articles
-}
+// List of constants
+const (
+	MissingContent string = "<missing>"
+)
 
-func createArticleChannel(articles ...db.Article) <-chan *db.Article {
+// - - - - - STAGES - - - - - //
+
+func createArticleChannel(articles ...*db.Article) <-chan *db.Article {
 	out := make(chan *db.Article)
 	go func() {
 		defer close(out)
-		for i, a := range articles {
-			log.Println("# ", i)
-			out <- &a
+		for _, a := range articles {
+			out <- a
 		}
 	}()
 	return out
@@ -41,40 +36,38 @@ func annotate(articles <-chan *db.Article) (<-chan *Annotation, <-chan *Annotati
 	errc := make(chan error, 1)         // For errors
 
 	// Create a client for NLP server
-	st := configs.LoadConfigs().VnNLP
-	nlp := NewNLPClient(st.Host, st.Port, st.Annotators)
-
+	conf := configs.LoadConfigs().VnNLP
+	nlp := NewNLPClient(conf.Host, conf.Port, conf.Annotators)
 	go func() {
 		defer close(out1)
 		defer close(out2)
 		defer close(nilAnnots)
 		defer close(errc)
 		for a := range articles {
-			// TODO: handle empty content, probably in the SQL
 			content := a.Content.String
-			parsed, err := nlp.DepParse(content)
-
-			if err != nil {
-				if e, ok := err.(*Error); ok && e.Type == ErrorTypeNilAnnotation {
-					nilAnnots <- a
+			if len(content) > 0 && content != MissingContent {
+				parsed, err := nlp.DepParse(content)
+				if err != nil {
+					if e, ok := err.(*Error); ok && e.Type == ErrorTypeTextTooLong {
+						nilAnnots <- a
+					} else {
+						errc <- err
+					}
 				} else {
-					errc <- err
+					annot := Annotation{a.ID, parsed}
+					out1 <- &annot
+					out2 <- &annot
 				}
-			} else {
-				annot := Annotation{a.ID, parsed}
-				out1 <- &annot
-				out2 <- &annot
 			}
 		}
 	}()
 	return out1, out2, nilAnnots, errc
 }
 
-func saveAnnotatedArticle(annotation <-chan *Annotation) <-chan error {
+func saveAnnotatedArticle(edb *db.Queries, annotation <-chan *Annotation) <-chan error {
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		edb := db.Connect()
 		for a := range annotation {
 			annotJSON, err := json.Marshal(&a.ParsedContent)
 			if err != nil {
@@ -89,7 +82,11 @@ func saveAnnotatedArticle(annotation <-chan *Annotation) <-chan error {
 				)
 				if err != nil {
 					if !strings.Contains(err.Error(), "violates unique constraint") {
-						errc <- &Error{Type: ErrorTypeUniqueConstraintViolation, Err: err}
+						errc <- &Error{
+							Type: ErrorTypeUniqueConstraintViolation,
+							Err:  err,
+							Msg:  strings.Join([]string{"Duplicate Article ID", string(a.ArticleID)}, " "),
+						}
 					} else {
 						errc <- err
 					}
@@ -126,11 +123,10 @@ func filterNamedEntities(annotations <-chan *Annotation) <-chan *db.CreateStageE
 	return out
 }
 
-func saveStageExtractedEntities(entities <-chan *db.CreateStageExtractedEntityParams) <-chan error {
+func saveStageExtractedEntities(edb *db.Queries, entities <-chan *db.CreateStageExtractedEntityParams) <-chan error {
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		edb := db.Connect()
 		for e := range entities {
 			err := edb.CreateStageExtractedEntity(ctx.Background(), *e)
 			if err != nil {
@@ -145,8 +141,8 @@ func mergeErrors(echans ...<-chan error) <-chan error {
 	var wg sync.WaitGroup
 	out := make(chan error, len(echans))
 	pickError := func(echan <-chan error) {
-		for e := range echan {
-			out <- e
+		for err := range echan {
+			out <- err
 		}
 		wg.Done()
 	}
@@ -161,66 +157,115 @@ func mergeErrors(echans ...<-chan error) <-chan error {
 	return out
 }
 
-// TODO: implement this to handle large articles, not for now
-func handleNilAnnotation(articles <-chan *db.Article) {
-	go func() {
-		for a := range articles {
-			log.Println("\n Nil Annotation: ", a.ID, len(a.Content.String))
-		}
-	}()
-}
+// - - - - - PREPARE A BATCH - - - - - //
 
-// RunExtractPipeline is the main controller of the NLP pipeline
-func RunExtractPipeline() bool {
+// runPipeline processes a channel of articles to return any that has nil annotations and any error
+func runPipeline(edb *db.Queries, articles []*db.Article) ([]*db.Article, error) {
 	var errchans []<-chan error
 
-	numArticles := configs.LoadConfigs().VnNLP.VnNLPConfigs.NumberArticlePerBatch
+	// 1. Create a channel of articles
+	articleChan := createArticleChannel(articles...)
 
-	batch := fetchArticles(numArticles)
-
-	achan := createArticleChannel(batch...)
-
-	annots1, annots2, nilAnnots, serverErrs := annotate(achan)
+	// 2. Annotate each article
+	annots1, annots2, nilAnnots, serverErrs := annotate(articleChan)
 	errchans = append(errchans, serverErrs)
 
-	errc1 := saveAnnotatedArticle(annots1)
+	// 3. Save articles' annotation
+	errc1 := saveAnnotatedArticle(edb, annots1)
 	errchans = append(errchans, errc1)
 
+	// 4. Filter Entities from annotation of each article
 	entities := filterNamedEntities(annots2)
 
-	errc2 := saveStageExtractedEntities(entities)
+	// 5. Save articles' entities into a stage table
+	errc2 := saveStageExtractedEntities(edb, entities)
 	errchans = append(errchans, errc2)
 
-	handleNilAnnotation(nilAnnots)
-
+	// Merge errors from every stage
 	errs := mergeErrors(errchans...)
 
 	numServerErrors := 0
+	var unfinished []*db.Article
 
-	for err := range errs {
-		log.Println(">>> ERR: ", err)
+	select {
+	case err := <-errs:
+		log.Println("Errs: ", err)
 		if err, ok := err.(*Error); ok {
 			switch err.Type {
-			case ErrorTypeRequestFailed:
-				numServerErrors++
-			case ErrorTypeServerNotResponding:
-				numServerErrors++
-			case ErrorTypeServerError:
+			case ErrorTypeRequestFailed, ErrorTypeServerNotResponding, ErrorTypeServerError:
 				numServerErrors++
 			}
 		}
+		// TODO: need to use context to cancel the pipeline
+		if numServerErrors > 0 {
+			return nil, &Error{Type: ErrorTypeResetServer}
+		}
+	case na := <-nilAnnots:
+		log.Println("Nil: ", na.ID)
+		unfinished = append(unfinished, na)
+		log.Println("Unfinished: ", len(unfinished))
 	}
-
-	if numServerErrors > 0 {
-		return false
-	}
-	return true
+	return unfinished, nil
 }
 
-/** Thoughts **
+func fetchArticles(edb *db.Queries, ids []int32) []*db.Article {
+	articles, err := edb.GetArticle_ByListID(ctx.Background(), ids)
+	if err != nil {
+		return nil
+	}
+	out := []*db.Article{}
+	for i := range articles {
+		out = append(out, &articles[i])
+	}
+	return out
+}
 
-It is actually not bad to fail a pipeline once a stage fails. There are two main types of behaviors:
-First is acceptable failure which will be recorded but will not fail the pipeline.
-Second is unacceptable failure, for instance server not responding. It will fail the pipeline
-and signal the Main controller to do something with the server.
-*/
+// processBatch processes a batch of article IDs
+func processBatch(edb *db.Queries, ids []int32) error {
+	// 1. Get the articles
+	articles := fetchArticles(edb, ids)
+	unfinished, err := runPipeline(edb, articles)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Total unfinished: ", len(unfinished))
+	return nil
+}
+
+// RunExtractPipeline is the main controller of the NLP pipeline
+func RunExtractPipeline(dbc *db.DB) bool {
+	// Get number of articles per batch
+	numArticlePerBatch := configs.LoadConfigs().VnNLP.NumberArticlePerBatch
+
+	// Get unprocessed article IDs
+	edb := dbc.Connect()
+	ids, err := edb.GetUnprocessedArticleID(ctx.Background())
+
+	// TODO: resolve this
+	if err != nil || len(ids) == 0 {
+		return true
+	}
+
+	// Prepare batches of IDs
+	batches := chunkIDs(numArticlePerBatch, ids)
+	log.Println("Total batches: ", len(batches))
+
+	// Run batch with pipeline
+	for i, batch := range batches {
+		log.Println("\n>>>> BATCH: ", i, batch)
+		err := processBatch(edb, batch)
+
+		if err != nil {
+			log.Println(">> PIPELINE ERR: ", err)
+			if err, ok := err.(*Error); ok {
+				if err.Type == ErrorTypeResetServer {
+					log.Println(">>> NEED TO RESET SERVER: ", err)
+					return false
+				}
+			}
+		}
+	}
+	log.Println(">>> FINISHED ALL BATCHES")
+	return true
+}

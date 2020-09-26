@@ -6,6 +6,8 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/lib/pq"
 )
 
 const createArticle = `-- name: CreateArticle :exec
@@ -30,31 +32,43 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) er
 	return err
 }
 
-const createManyArticles = `-- name: CreateManyArticles :exec
-
+const deleteArticle_ByID = `-- name: DeleteArticle_ByID :exec
 DELETE FROM articles
 WHERE id = $1
 `
 
-// INSERT INTO articles (
-// 	src_id
-// 	, title
-// 	, content
-// ) VALUES $1
-// ;
-func (q *Queries) CreateManyArticles(ctx context.Context, id int32) error {
-	_, err := q.exec(ctx, q.createManyArticlesStmt, createManyArticles, id)
+func (q *Queries) DeleteArticle_ByID(ctx context.Context, id int32) error {
+	_, err := q.exec(ctx, q.deleteArticle_ByIDStmt, deleteArticle_ByID, id)
 	return err
 }
 
-const getArticle_ByID = `-- name: GetArticle_ByID :many
+const getArticle_ByID = `-- name: GetArticle_ByID :one
 SELECT id, src_id, title, content, created_at
 FROM articles 
 WHERE id = $1
 `
 
-func (q *Queries) GetArticle_ByID(ctx context.Context, id int32) ([]Article, error) {
-	rows, err := q.query(ctx, q.getArticle_ByIDStmt, getArticle_ByID, id)
+func (q *Queries) GetArticle_ByID(ctx context.Context, id int32) (Article, error) {
+	row := q.queryRow(ctx, q.getArticle_ByIDStmt, getArticle_ByID, id)
+	var i Article
+	err := row.Scan(
+		&i.ID,
+		&i.SrcID,
+		&i.Title,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getArticle_ByListID = `-- name: GetArticle_ByListID :many
+SELECT id, src_id, title, content, created_at
+FROM articles 
+WHERE id = ANY($1::int[])
+`
+
+func (q *Queries) GetArticle_ByListID(ctx context.Context, dollar_1 []int32) ([]Article, error) {
+	rows, err := q.query(ctx, q.getArticle_ByListIDStmt, getArticle_ByListID, pq.Array(dollar_1))
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +155,45 @@ func (q *Queries) GetArticles_Limit(ctx context.Context, limit int32) ([]Article
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnprocessedArticleID = `-- name: GetUnprocessedArticleID :many
+SELECT 
+  a.id 
+FROM 
+  articles a
+    LEFT JOIN 
+  article_entities ae 
+    ON a.id = ae.article_id 
+    LEFT JOIN 
+  stage_extracted_entities se 
+    ON a.id = se.article_id
+WHERE 
+  ae.article_id IS NULL
+  AND se.article_id IS NULL
+`
+
+func (q *Queries) GetUnprocessedArticleID(ctx context.Context) ([]int32, error) {
+	rows, err := q.query(ctx, q.getUnprocessedArticleIDStmt, getUnprocessedArticleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

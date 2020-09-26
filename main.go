@@ -2,20 +2,21 @@ package main
 
 import (
 	"enews/pkg/configs"
+	"enews/pkg/db"
 	"enews/pkg/nlp/vn"
 	"log"
 )
 
 func runNLPServer(start, stop, reset chan bool) {
 	// Load VnNLP configs
-	st := configs.LoadConfigs().VnNLP
+	conf := configs.LoadConfigs().VnNLP
 
 	// Start VnNLP server
 	var s = vn.NLPServer{
-		Host:        st.Host,
-		Port:        st.Port,
-		Annotators:  st.Annotators,
-		MaxHeapSize: st.MaxHeapSize,
+		Host:        conf.Host,
+		Port:        conf.Port,
+		Annotators:  conf.Annotators,
+		MaxHeapSize: conf.MaxHeapSize,
 	}
 
 	// Use Select to determine when to stop the server (i.e when the program ends)
@@ -24,22 +25,28 @@ func runNLPServer(start, stop, reset chan bool) {
 		case <-start:
 
 			log.Println(`Starting NLP Server: `, s.Host)
-			started := s.Start()
+			// started := s.Start()
 
 			// Let main know that the server has been started successfully
-			if started == true {
-				start <- started
-			}
+			// if started == true {
+			// 	start <- started
+			// }
+			start <- true
 
 		case <-stop:
 			log.Println(`Stopping NLP Server`)
 			var stopped bool
 
-			if st.VnNLPConfigs.StopAfterProgramQuit == true {
-				stopped, _ = s.Stop()
+			if conf.VnNLPConfigs.StopAfterProgramQuit == true {
+				stopped, err := s.Stop()
+				if err != nil {
+					log.Println("Unable to stop VnNLP Server: ", err)
+				}
+				log.Println("Server stopped? ", stopped)
 			} else {
 				stopped = true
 			}
+
 			stop <- stopped
 
 		case <-reset:
@@ -56,13 +63,12 @@ func runNLPServer(start, stop, reset chan bool) {
 	}
 }
 
-func work(extract, done chan bool) {
+func work(db *db.DB, extract, done chan bool) {
 	for {
 		select {
 		case <-extract:
 			log.Println("Start working....")
-
-			switch vn.RunExtractPipeline() {
+			switch vn.RunExtractPipeline(db) {
 			case false:
 				extract <- false
 			case true:
@@ -76,6 +82,13 @@ func work(extract, done chan bool) {
 
 // main triggers and coordinates core components concurrently
 func main() {
+	// Start a connection with the database
+	dbconn, err := db.ConnectDB()
+	if err != nil {
+		log.Fatal("Unable to connect to database: ", err)
+	}
+
+	//
 	var start = make(chan bool)
 	var stop = make(chan bool)
 	var resetServer = make(chan bool)
@@ -83,7 +96,7 @@ func main() {
 	var done = make(chan bool)
 
 	go runNLPServer(start, stop, resetServer)
-	go work(extract, done)
+	go work(dbconn, extract, done)
 
 	start <- true
 
@@ -96,8 +109,8 @@ func main() {
 				log.Println("Unable to start NLP server. Shutdown.")
 				return
 			}
-		case issues := <-extract:
-			log.Println("Work has server issue: ", issues)
+		case <-extract:
+			log.Println("Extractor has notified that work has server issue")
 			resetServer <- true
 		case <-resetServer:
 			log.Println("Reset successfully. Restart the pipeline...")

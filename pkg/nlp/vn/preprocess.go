@@ -3,11 +3,11 @@ package vn
 import "regexp"
 
 func removeMissingContent(c string) string {
-	return ``
+	return c
 }
 
 func removeNewline(c string) string {
-	return ``
+	return c
 }
 
 // cleanEntity removes unwanted characters in a token,
@@ -23,4 +23,15 @@ func cleanEntity(e string) string {
 		e = m.ReplaceAllString(e, new)
 	}
 	return e
+}
+
+// chunkIDs groups a list of items into smaller chunks
+func chunkIDs(size int, items []int32) [][]int32 {
+	total := (len(items) + size - 1) / size
+	batches := make([][]int32, 0, total)
+	for size < len(items) {
+		items, batches = items[size:], append(batches, items[0:size])
+	}
+	batches = append(batches, items)
+	return batches
 }

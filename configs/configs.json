@@ -5,7 +5,10 @@
 		"port": "5432",
 		"dbname": "postgres",
 		"username": "steve",
-		"password": ""
+		"password": "",
+		"maxOpenConnection": 20,
+		"maxIdleConnection": 0,
+		"connMaxLifetime": 5
 	},
 	"vnnlp": {
 		"maxHeapSize": "-Xmx2g",
@@ -14,7 +17,8 @@
 		"annotators": "wseg,pos,ner,parse",
 		"configs": {
 			"stopAfterProgramQuit": false,
-			"numberArticlePerBatch": 5
+			"numberArticlePerBatch": 10
 		}
 	}
 }
+

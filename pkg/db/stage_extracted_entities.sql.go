@@ -38,9 +38,12 @@ func (q *Queries) CreateStageExtractedEntity(ctx context.Context, arg CreateStag
 }
 
 const getStageExtractedEntities_ByArticleID = `-- name: GetStageExtractedEntities_ByArticleID :many
-SELECT article_id, entity, entity_type, counts, created_at
-FROM stage_extracted_entities
-WHERE article_id = $1
+SELECT 
+  article_id, entity, entity_type, counts, created_at
+FROM 
+  stage_extracted_entities
+WHERE 
+  article_id = $1
 `
 
 func (q *Queries) GetStageExtractedEntities_ByArticleID(ctx context.Context, articleID int32) ([]StageExtractedEntity, error) {

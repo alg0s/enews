@@ -1,4 +1,4 @@
-# enews Extractor
+# Enews Entities Extractor
 
 ## Introduction
 Extractor extracts entities from text. Each entity will come with an entity type, such as PER-PERSON, LOC-LOCATION, or ORG-ORGANIZATION. 
@@ -29,7 +29,15 @@ Entity Extraction steps:
 1. **Unique constraint violated**: when the db returns an error
 2. **Server Not Responding**
 3. **Server Overloaded**: require restarting the server, a signal needs to be send upstream to `main`, and all ongoing article processes have to be canceled and re-run once the server is ready again.
-4.  
+
+## Discussion
+
+1. **Pipeline Failure**
+
+   It is actually not bad to fail a pipeline once a stage fails. There are two main types of behaviors:
+   First is acceptable failure which will be recorded but will not fail the pipeline.
+   Second is unacceptable failure, for instance server not responding. It will fail the pipeline and signal the Main controller to do something with the server.
+
 
 ## Remaining problems
 1. Stage 3A and 3B of the pipeline have yet run in concurrently due to sharing the same `in` channel >> DONE
@@ -59,3 +67,4 @@ Entity Extraction steps:
   
 6. Unit tests for all functions
    - Test restarting server with feedback from the pipeline
+

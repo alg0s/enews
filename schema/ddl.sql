@@ -19,18 +19,6 @@ CREATE TABLE articles (
     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-
--- Extracted_Articles stores extracted entities, playing a role of archiving article IDs
--- CREATE TABLE extracted_articles (
---     id              SERIAL PRIMARY KEY
---     , article_id    INT NOT NULL
---     , created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
---     , FOREIGN KEY (article_id) 
---         REFERENCES articles(id)
---         ON DELETE CASCADE
---     , UNIQUE(article_id)
--- );
-
 -- Annotated_Articles stores annotated articles and individual entities
 CREATE TABLE annotated_articles (
     article_id INT NOT NULL 

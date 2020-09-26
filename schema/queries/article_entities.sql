@@ -14,3 +14,4 @@ INSERT INTO article_entities (
     $1, $2, $3, $4
 )
 ;
+

@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS enet.articles_entities (
     src         VARCHAR NOT NULL,
     src_id      VARCHAR NOT NULL, 
     entity      VARCHAR NOT NULL, 
-    ent_id      INT NOT NULL,
+    ent_id      INT NOT NULL,    
     entity_type VARCHAR(20) NOT NULL, 
     counts      SMALLINT NOT NULL, 
     published_at TIMESTAMPTZ NOT NULL,

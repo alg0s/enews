@@ -11,12 +11,15 @@ const settingPath = `configs/configs.json`
 
 // Database represents database configs
 type Database struct {
-	Engine   string `json:"engine"`
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	Dbname   string `json:"dbname"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Engine            string `json:"engine"`
+	Host              string `json:"host"`
+	Port              string `json:"port"`
+	Dbname            string `json:"dbname"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+	MaxOpenConnection int    `json:"maxOpenConnection"`
+	MaxIdleConnection int    `json:"maxIdleConnection"`
+	ConnMaxLifetime   int    `json:"connMaxLifetime"`
 }
 
 // VnNLPConfigs represents optional configs of VnNLP

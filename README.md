@@ -93,7 +93,8 @@ TBA
 ## Test 
 
 ## References
-
+  - Tutorials:
+    - https://www.goin5minutes.com/screencasts/index.html
   - Processes:
     - https://bigkevmcd.github.io/go/pgrp/context/2019/02/19/terminating-processes-in-go.html
 
@@ -123,6 +124,11 @@ TBA
 
   - Context:
     - https://medium.com/a-journey-with-go/go-context-and-cancellation-by-propagation-7a808bbc889c
+
+  - DB setup:
+    - https://medium.com/@benbjohnson/structuring-applications-in-go-3b04be4ff091#9e7e
+    - https://golangbyexample.com/singleton-design-pattern-go/
+    - 
 
 <!--      
 # vim: set tw=79:

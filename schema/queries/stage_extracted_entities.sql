@@ -1,7 +1,10 @@
 -- name: GetStageExtractedEntities_ByArticleID :many
-SELECT *
-FROM stage_extracted_entities
-WHERE article_id = $1 
+SELECT 
+  *
+FROM 
+  stage_extracted_entities
+WHERE 
+  article_id = $1 
 ;
 
 -- name: CreateStageExtractedEntity :exec

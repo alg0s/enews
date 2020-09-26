@@ -11,13 +11,14 @@ type Querier interface {
 	CreateAnnotatedArticle(ctx context.Context, arg CreateAnnotatedArticleParams) error
 	CreateArticle(ctx context.Context, arg CreateArticleParams) error
 	CreateArticleEntities(ctx context.Context, arg CreateArticleEntitiesParams) error
-	CreateManyArticles(ctx context.Context, id int32) error
 	CreateStageExtractedEntity(ctx context.Context, arg CreateStageExtractedEntityParams) error
 	CreateUniqueEntity(ctx context.Context, arg CreateUniqueEntityParams) error
+	DeleteArticle_ByID(ctx context.Context, id int32) error
 	GetAnnotatedArticles(ctx context.Context) ([]AnnotatedArticle, error)
 	GetAnnotatedArticles_ByID(ctx context.Context, articleID int32) (AnnotatedArticle, error)
 	GetArticleEntities_ByArticleID(ctx context.Context, articleID int32) ([]ArticleEntity, error)
-	GetArticle_ByID(ctx context.Context, id int32) ([]Article, error)
+	GetArticle_ByID(ctx context.Context, id int32) (Article, error)
+	GetArticle_ByListID(ctx context.Context, dollar_1 []int32) ([]Article, error)
 	GetArticles(ctx context.Context) ([]Article, error)
 	GetArticles_Limit(ctx context.Context, limit int32) ([]Article, error)
 	GetEntityType_ByName(ctx context.Context, name string) (EntityType, error)
@@ -27,6 +28,7 @@ type Querier interface {
 	GetUniqueEntities_ByEntityType(ctx context.Context, entityTypeID sql.NullInt32) ([]UniqueEntity, error)
 	GetUniqueEntities_ByName(ctx context.Context, name sql.NullString) ([]UniqueEntity, error)
 	GetUniqueEntities_ByName_EntityType(ctx context.Context, arg GetUniqueEntities_ByName_EntityTypeParams) (UniqueEntity, error)
+	GetUnprocessedArticleID(ctx context.Context) ([]int32, error)
 	ListRawArticles(ctx context.Context) ([]EnewsRawArticle, error)
 }
 

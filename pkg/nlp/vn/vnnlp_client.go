@@ -1,6 +1,7 @@
 package vn
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,11 @@ type NLPClient struct {
 	Port       string
 	Host       string
 	Annotators string
+}
+
+// Payload is the body content for POST request
+type Payload struct {
+	Text string `json:"text"`
 }
 
 // NewNLPClient generates a new NLPClient instance
@@ -46,7 +52,6 @@ func DefaultClient() *NLPClient {
 func (c *NLPClient) Ping() bool {
 	var address = c.Address
 	if address == "" {
-		// log.Panic("Missing Server Address")
 		return false
 	}
 
@@ -90,7 +95,7 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 		annotators = c.Annotators
 	}
 
-	// construct URL
+	// Construct URL
 	urlStr := strings.Join([]string{c.Address, `/handle`}, ``)
 	u, _ := url.Parse(urlStr)
 	query, _ := url.ParseQuery(u.RawQuery)
@@ -98,38 +103,48 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	query.Add(`props`, annotators)
 	u.RawQuery = query.Encode()
 
-	// set content type
-	contentType := `text/plain`
-	resp, err := http.Post(u.String(), contentType, nil)
+	// Set content type
+	contentType := `application/json`
+
+	// Prepare payload
+	payload := Payload{Text: textInput}
+	body, err := json.Marshal(payload)
+
 	if err != nil {
-		// return nil, err
+		return nil, err
+	}
+
+	// Send request
+	resp, err := http.Post(u.String(), contentType, bytes.NewBuffer(body))
+
+	if err != nil {
 		return nil, &Error{Type: ErrorTypeServerError, Err: err}
 	}
 
 	defer resp.Body.Close()
 	var sr ServerResponse
 
-	if resp.StatusCode == http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusOK:
 		err = json.NewDecoder(resp.Body).Decode(&sr)
 		if err != nil {
 			return nil, errors.Errorf("Unable to read server response: %v", err)
 		}
+		if sr.Error != "" {
+			return nil, &Error{Type: ErrorTypeServerError, Msg: sr.Error}
+		}
 		return &sr, nil
+	case http.StatusRequestURITooLong:
+		return nil, &Error{Type: ErrorTypeTextTooLong, Msg: resp.Status}
+	default:
+		return nil, &Error{Type: ErrorTypeRequestFailed, Msg: resp.Status}
 	}
-
-	if sr.Error != "" {
-		return nil, &Error{Type: ErrorTypeServerError, Msg: sr.Error}
-	}
-	return nil, &Error{Type: ErrorTypeRequestFailed, Msg: resp.Status}
 }
 
 func (c *NLPClient) customAnnotate(text string, annotators string) (*[]Sentence, error) {
 	result, err := c.annotate(text, annotators)
 	if err != nil {
 		return nil, err
-	}
-	if result.Sentences == nil {
-		return nil, &Error{Type: ErrorTypeNilAnnotation}
 	}
 	return &result.Sentences, nil
 }

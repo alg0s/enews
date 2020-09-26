@@ -4,15 +4,18 @@ import (
 	"database/sql"
 	"enews/pkg/configs"
 	"fmt"
-	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
-// TODO: - add db engine verification
+// DB provides a connection to the database
+type DB struct {
+	db *sql.DB
+}
 
-// Conn returns a sql.DB connection that connects to the database in user settings `configs.json`
-func conn() *sql.DB {
+// Init starts a connection with the database defined in `configs.json`
+func (d *DB) init() error {
 	var conf = configs.LoadConfigs().Database
 	var dsn = fmt.Sprintf(`host=%s port=%s user=%s dbname=%s sslmode=disable`,
 		conf.Host,
@@ -21,14 +24,34 @@ func conn() *sql.DB {
 		conf.Dbname,
 	)
 	conn, err := sql.Open(conf.Engine, dsn)
+
+	// Setup Connection Pool
+	conn.SetMaxOpenConns(conf.MaxOpenConnection)
+	conn.SetMaxIdleConns(conf.MaxIdleConnection)
+	conn.SetConnMaxLifetime(time.Duration(conf.ConnMaxLifetime) * time.Minute)
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	return conn
+
+	if err = conn.Ping(); err != nil {
+		return err
+	}
+	d.db = conn
+	return nil
 }
 
-// Connect makes a connection to the db and provides a db object
-func Connect() *Queries {
-	var c = conn()
-	return New(c)
+// GetConn returns a Queries pointer that can be used to perform db transactions
+func (d *DB) GetConn() *Queries {
+	return New(d.db)
+}
+
+// ConnectDB creates a new instance of DB
+func ConnectDB() (*DB, error) {
+	var db DB
+	err := db.init()
+	if err != nil {
+		return nil, err
+	}
+	return &db, nil
 }

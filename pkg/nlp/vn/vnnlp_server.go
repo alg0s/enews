@@ -30,11 +30,12 @@ import (
 
 const (
 	// Server Defaults
-	defaultMaxHeapSize  string = `-Xmx2g`
-	defaultHost         string = `127.0.0.1`
-	defaultPort         string = `9000`
-	defaultAnnotators   string = `wseg,pos,ner,parse`
-	serverJarFile       string = `pkg/nlp/vn/vncorenlp/VnCoreNLPServer.jar`
+	defaultMaxHeapSize string = `-Xmx2g`
+	defaultHost        string = `127.0.0.1`
+	defaultPort        string = `9000`
+	defaultAnnotators  string = `wseg,pos,ner,parse`
+	// serverJarFile       string = `pkg/nlp/vn/vncorenlp/VnCoreNLPServer.jar`
+	serverJarFile       string = `pkg/nlp/vn/vncorenlp/VnNLPServer.jar`
 	nlpJarFile          string = `pkg/nlp/vn/vncorenlp/VnCoreNLP-1.1.1.jar`
 	defaultMaxURILength int    = 8192
 )
@@ -69,6 +70,7 @@ func (s *NLPServer) findExistingServerProcess() (*os.Process, error) {
 		`-c`, `java`,
 	}
 	pid, err := exec.Command(`lsof`, args...).CombinedOutput()
+	log.Println(">> PID: ", string(pid))
 	if err != nil {
 		log.Println("Err cmd: ", err, args)
 		return nil, err
@@ -76,12 +78,14 @@ func (s *NLPServer) findExistingServerProcess() (*os.Process, error) {
 
 	// 2. FindProcess
 	intPid, err := strconv.Atoi(strings.TrimSpace(string(pid)))
+	log.Println(">> intPID: ", intPid)
 	if err != nil {
 		log.Println("Err find trim space: ", err, intPid)
 		return nil, err
 	}
 
 	process, err := os.FindProcess(intPid)
+
 	if err != nil {
 		log.Println("Err find proc: ", err, process)
 		return nil, err
