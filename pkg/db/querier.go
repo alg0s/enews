@@ -25,10 +25,12 @@ type Querier interface {
 	GetRawArticle(ctx context.Context, addedID sql.NullString) ([]EnewsRawArticle, error)
 	GetRawArticle_Limit(ctx context.Context, limit int32) ([]EnewsRawArticle, error)
 	GetStageExtractedEntities_ByArticleID(ctx context.Context, articleID int32) ([]StageExtractedEntity, error)
-	GetUniqueEntities_ByEntityType(ctx context.Context, entityTypeID sql.NullInt32) ([]UniqueEntity, error)
-	GetUniqueEntities_ByName(ctx context.Context, name sql.NullString) ([]UniqueEntity, error)
-	GetUniqueEntities_ByName_EntityType(ctx context.Context, arg GetUniqueEntities_ByName_EntityTypeParams) (UniqueEntity, error)
+	GetUniqueEntities_ByName(ctx context.Context, name string) ([]UniqueEntity, error)
+	GetUniqueEntities_ByName_Type(ctx context.Context, arg GetUniqueEntities_ByName_TypeParams) (UniqueEntity, error)
+	GetUniqueEntities_ByType(ctx context.Context, entityType string) ([]UniqueEntity, error)
 	GetUnprocessedArticleID(ctx context.Context) ([]int32, error)
+	InsertNewArticleEntitiesFromStagedEntities(ctx context.Context) error
+	InsertNewEntitiesFromStagedEntities(ctx context.Context) error
 	ListRawArticles(ctx context.Context) ([]EnewsRawArticle, error)
 }
 

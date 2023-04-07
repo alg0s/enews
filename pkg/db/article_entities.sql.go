@@ -71,3 +71,28 @@ func (q *Queries) GetArticleEntities_ByArticleID(ctx context.Context, articleID 
 	}
 	return items, nil
 }
+
+const insertNewArticleEntitiesFromStagedEntities = `-- name: InsertNewArticleEntitiesFromStagedEntities :exec
+INSERT INTO unique_entities 
+    ("name", entity_type)
+    SELECT 
+        se.entity
+        , se.entity_type
+    FROM 
+        stage_extracted_entities se
+            LEFT JOIN 
+        unique_entities ue
+            ON  se.entity = ue.name
+                AND se.entity_type = ue.entity_type
+    WHERE        
+        ue.name IS NULL 
+        AND ue.entity_type IS NULL 
+    GROUP BY 
+        se.entity
+        , se.entity_type
+`
+
+func (q *Queries) InsertNewArticleEntitiesFromStagedEntities(ctx context.Context) error {
+	_, err := q.exec(ctx, q.insertNewArticleEntitiesFromStagedEntitiesStmt, insertNewArticleEntitiesFromStagedEntities)
+	return err
+}

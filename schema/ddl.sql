@@ -63,14 +63,11 @@ CREATE TABLE entity_types (
 );
 
 CREATE TABLE unique_entities (
-    id                  SERIAL 
-    , name              TEXT
-    , entity_type_id    INT 
-    , created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    , FOREIGN KEY (entity_type_id) 
-        REFERENCES entity_types(id)
-        ON DELETE CASCADE
-    , UNIQUE(name, entity_type_id)
+    id            SERIAL 
+    , name        TEXT          NOT NULL
+    , entity_type VARCHAR(250)  NOT NULL            
+    , created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    , UNIQUE(name, entity_type)
 );
 
 

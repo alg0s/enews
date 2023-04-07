@@ -10,15 +10,15 @@ type Token struct {
 	DepLabel string `json:"depLabel"`
 }
 
-// Sentence is an array of Token's
-type Sentence []Token
+// ParsedSentence is an array of Token's
+type ParsedSentence []Token
 
 // ServerResponse is the response from NLPServer
 type ServerResponse struct {
-	Sentences []Sentence `json:"sentences"`
-	Status    bool       `json:"status"`
-	Error     string     `json:"error"`
-	Language  string     `json:"language"`
+	Sentences []ParsedSentence `json:"sentences"`
+	Status    bool             `json:"status"`
+	Error     string           `json:"error"`
+	Language  string           `json:"language"`
 }
 
 // ServerInfo holds information of a running NLPServer
@@ -32,7 +32,7 @@ type ServerInfo struct {
 // ParsedArticle represents an extracted article with identified tokens
 type ParsedArticle struct {
 	ID        int32
-	Sentences *[]Sentence
+	Sentences *[]ParsedSentence
 }
 
 // Entity represents a named entity recognized by the NLP service
@@ -44,5 +44,5 @@ type Entity struct {
 // Annotation represents an article that is already annotated
 type Annotation struct {
 	ArticleID     int32
-	ParsedContent *[]Sentence
+	ParsedContent *[]ParsedSentence
 }

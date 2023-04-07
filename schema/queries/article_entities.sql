@@ -15,3 +15,23 @@ INSERT INTO article_entities (
 )
 ;
 
+
+-- name: InsertNewArticleEntitiesFromStagedEntities :exec
+INSERT INTO unique_entities 
+    ("name", entity_type)
+    SELECT 
+        se.entity
+        , se.entity_type
+    FROM 
+        stage_extracted_entities se
+            LEFT JOIN 
+        unique_entities ue
+            ON  se.entity = ue.name
+                AND se.entity_type = ue.entity_type
+    WHERE        
+        ue.name IS NULL 
+        AND ue.entity_type IS NULL 
+    GROUP BY 
+        se.entity
+        , se.entity_type
+;

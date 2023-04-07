@@ -5,70 +5,34 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createUniqueEntity = `-- name: CreateUniqueEntity :exec
 INSERT INTO unique_entities (
-    name
-    , entity_type_id
+    name, entity_type
 ) VALUES (
     $1, $2 
 )
-RETURNING id, name, entity_type_id, created_at
+RETURNING id, name, entity_type, created_at
 `
 
 type CreateUniqueEntityParams struct {
-	Name         sql.NullString `json:"name"`
-	EntityTypeID sql.NullInt32  `json:"entity_type_id"`
+	Name       string `json:"name"`
+	EntityType string `json:"entity_type"`
 }
 
 func (q *Queries) CreateUniqueEntity(ctx context.Context, arg CreateUniqueEntityParams) error {
-	_, err := q.exec(ctx, q.createUniqueEntityStmt, createUniqueEntity, arg.Name, arg.EntityTypeID)
+	_, err := q.exec(ctx, q.createUniqueEntityStmt, createUniqueEntity, arg.Name, arg.EntityType)
 	return err
 }
 
-const getUniqueEntities_ByEntityType = `-- name: GetUniqueEntities_ByEntityType :many
-SELECT id, name, entity_type_id, created_at 
-FROM unique_entities
-WHERE entity_type_id = $1
-`
-
-func (q *Queries) GetUniqueEntities_ByEntityType(ctx context.Context, entityTypeID sql.NullInt32) ([]UniqueEntity, error) {
-	rows, err := q.query(ctx, q.getUniqueEntities_ByEntityTypeStmt, getUniqueEntities_ByEntityType, entityTypeID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []UniqueEntity
-	for rows.Next() {
-		var i UniqueEntity
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.EntityTypeID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getUniqueEntities_ByName = `-- name: GetUniqueEntities_ByName :many
-SELECT id, name, entity_type_id, created_at 
+SELECT id, name, entity_type, created_at 
 FROM unique_entities 
 WHERE name = $1
 `
 
-func (q *Queries) GetUniqueEntities_ByName(ctx context.Context, name sql.NullString) ([]UniqueEntity, error) {
+func (q *Queries) GetUniqueEntities_ByName(ctx context.Context, name string) ([]UniqueEntity, error) {
 	rows, err := q.query(ctx, q.getUniqueEntities_ByNameStmt, getUniqueEntities_ByName, name)
 	if err != nil {
 		return nil, err
@@ -80,7 +44,7 @@ func (q *Queries) GetUniqueEntities_ByName(ctx context.Context, name sql.NullStr
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.EntityTypeID,
+			&i.EntityType,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -96,27 +60,83 @@ func (q *Queries) GetUniqueEntities_ByName(ctx context.Context, name sql.NullStr
 	return items, nil
 }
 
-const getUniqueEntities_ByName_EntityType = `-- name: GetUniqueEntities_ByName_EntityType :one
-SELECT id, name, entity_type_id, created_at
+const getUniqueEntities_ByName_Type = `-- name: GetUniqueEntities_ByName_Type :one
+SELECT id, name, entity_type, created_at
 FROM unique_entities
 WHERE 
     name = $1 
-    AND entity_type_id = $2
+    AND entity_type = $2
 `
 
-type GetUniqueEntities_ByName_EntityTypeParams struct {
-	Name         sql.NullString `json:"name"`
-	EntityTypeID sql.NullInt32  `json:"entity_type_id"`
+type GetUniqueEntities_ByName_TypeParams struct {
+	Name       string `json:"name"`
+	EntityType string `json:"entity_type"`
 }
 
-func (q *Queries) GetUniqueEntities_ByName_EntityType(ctx context.Context, arg GetUniqueEntities_ByName_EntityTypeParams) (UniqueEntity, error) {
-	row := q.queryRow(ctx, q.getUniqueEntities_ByName_EntityTypeStmt, getUniqueEntities_ByName_EntityType, arg.Name, arg.EntityTypeID)
+func (q *Queries) GetUniqueEntities_ByName_Type(ctx context.Context, arg GetUniqueEntities_ByName_TypeParams) (UniqueEntity, error) {
+	row := q.queryRow(ctx, q.getUniqueEntities_ByName_TypeStmt, getUniqueEntities_ByName_Type, arg.Name, arg.EntityType)
 	var i UniqueEntity
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.EntityTypeID,
+		&i.EntityType,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getUniqueEntities_ByType = `-- name: GetUniqueEntities_ByType :many
+SELECT id, name, entity_type, created_at 
+FROM unique_entities
+WHERE entity_type = $1
+`
+
+func (q *Queries) GetUniqueEntities_ByType(ctx context.Context, entityType string) ([]UniqueEntity, error) {
+	rows, err := q.query(ctx, q.getUniqueEntities_ByTypeStmt, getUniqueEntities_ByType, entityType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UniqueEntity
+	for rows.Next() {
+		var i UniqueEntity
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.EntityType,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertNewEntitiesFromStagedEntities = `-- name: InsertNewEntitiesFromStagedEntities :exec
+INSERT INTO article_entities 
+    (article_id, entity, entity_type, counts)
+    SELECT 
+        se.article_id, 
+        se.entity, 
+        se.entity_type, 
+        se.counts
+    FROM 
+        stage_extracted_entities se 
+            LEFT JOIN 
+        article_entities ae 
+            ON  se.article_id = ae.article_id
+    WHERE   
+        ae.article_id IS NULL
+`
+
+func (q *Queries) InsertNewEntitiesFromStagedEntities(ctx context.Context) error {
+	_, err := q.exec(ctx, q.insertNewEntitiesFromStagedEntitiesStmt, insertNewEntitiesFromStagedEntities)
+	return err
 }

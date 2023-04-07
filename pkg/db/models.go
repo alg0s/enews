@@ -72,8 +72,8 @@ type StageExtractedEntity struct {
 }
 
 type UniqueEntity struct {
-	ID           sql.NullInt32  `json:"id"`
-	Name         sql.NullString `json:"name"`
-	EntityTypeID sql.NullInt32  `json:"entity_type_id"`
-	CreatedAt    time.Time      `json:"created_at"`
+	ID         sql.NullInt32 `json:"id"`
+	Name       string        `json:"name"`
+	EntityType string        `json:"entity_type"`
+	CreatedAt  time.Time     `json:"created_at"`
 }

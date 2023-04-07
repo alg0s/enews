@@ -68,12 +68,8 @@ func work(db *db.DB, extract, done chan bool) {
 		select {
 		case <-extract:
 			log.Println("Start working....")
-			switch vn.RunExtractPipeline(db) {
-			case false:
-				extract <- false
-			case true:
-				done <- true
-			}
+			vn.RunExtractor(db)
+			done <- true
 		case <-done:
 			return
 		}
@@ -109,12 +105,6 @@ func main() {
 				log.Println("Unable to start NLP server. Shutdown.")
 				return
 			}
-		case <-extract:
-			log.Println("Extractor has notified that work has server issue")
-			resetServer <- true
-		case <-resetServer:
-			log.Println("Reset successfully. Restart the pipeline...")
-			extract <- true
 		case finished := <-done:
 			log.Println("Work has finished: ", finished)
 			done <- true

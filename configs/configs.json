@@ -17,7 +17,7 @@
 		"annotators": "wseg,pos,ner,parse",
 		"configs": {
 			"stopAfterProgramQuit": false,
-			"numberArticlePerBatch": 10
+			"numberArticlePerBatch": 30
 		}
 	}
 }

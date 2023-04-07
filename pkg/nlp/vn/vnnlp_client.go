@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -96,10 +97,10 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	}
 
 	// Construct URL
-	urlStr := strings.Join([]string{c.Address, `/handle`}, ``)
+	urlStr := strings.Join([]string{c.Address, `/handle`}, ``) // For Spark
+	// urlStr := strings.Join([]string{c.Address, `/annotate/all`}, ``) // For SpringBoot
 	u, _ := url.Parse(urlStr)
 	query, _ := url.ParseQuery(u.RawQuery)
-	query.Add(`text`, textInput)
 	query.Add(`props`, annotators)
 	u.RawQuery = query.Encode()
 
@@ -124,6 +125,8 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	defer resp.Body.Close()
 	var sr ServerResponse
 
+	log.Println(">>> StatusCode: ", resp.StatusCode)
+
 	switch resp.StatusCode {
 	case http.StatusOK:
 		err = json.NewDecoder(resp.Body).Decode(&sr)
@@ -141,7 +144,7 @@ func (c *NLPClient) annotate(textInput string, annotators string) (*ServerRespon
 	}
 }
 
-func (c *NLPClient) customAnnotate(text string, annotators string) (*[]Sentence, error) {
+func (c *NLPClient) customAnnotate(text string, annotators string) (*[]ParsedSentence, error) {
 	result, err := c.annotate(text, annotators)
 	if err != nil {
 		return nil, err
@@ -150,22 +153,22 @@ func (c *NLPClient) customAnnotate(text string, annotators string) (*[]Sentence,
 }
 
 // Tokenize return tokens from input string, otherwise empty string
-func (c *NLPClient) Tokenize(text string) (*[]Sentence, error) {
+func (c *NLPClient) Tokenize(text string) (*[]ParsedSentence, error) {
 	return c.customAnnotate(text, "wseg")
 }
 
 // PosTag returns POS tags from the input string, otherwise empty string
-func (c *NLPClient) PosTag(text string) (*[]Sentence, error) {
+func (c *NLPClient) PosTag(text string) (*[]ParsedSentence, error) {
 	return c.customAnnotate(text, "wseg,pos")
 }
 
 // Ner returns NER - Named Entity Recognition from the input string, otherwise empty string
-func (c *NLPClient) Ner(text string) (*[]Sentence, error) {
+func (c *NLPClient) Ner(text string) (*[]ParsedSentence, error) {
 	return c.customAnnotate(text, "wseg,pos,ner")
 }
 
 // DepParse returns parsed dependencies from input string, otherwise empty string
-func (c *NLPClient) DepParse(text string) (*[]Sentence, error) {
+func (c *NLPClient) DepParse(text string) (*[]ParsedSentence, error) {
 	return c.customAnnotate(text, "wseg,pos,ner,parse")
 }
 

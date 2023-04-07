@@ -73,17 +73,23 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStageExtractedEntities_ByArticleIDStmt, err = db.PrepareContext(ctx, getStageExtractedEntities_ByArticleID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStageExtractedEntities_ByArticleID: %w", err)
 	}
-	if q.getUniqueEntities_ByEntityTypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByEntityType); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByEntityType: %w", err)
-	}
 	if q.getUniqueEntities_ByNameStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByName); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByName: %w", err)
 	}
-	if q.getUniqueEntities_ByName_EntityTypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByName_EntityType); err != nil {
-		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByName_EntityType: %w", err)
+	if q.getUniqueEntities_ByName_TypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByName_Type); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByName_Type: %w", err)
+	}
+	if q.getUniqueEntities_ByTypeStmt, err = db.PrepareContext(ctx, getUniqueEntities_ByType); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUniqueEntities_ByType: %w", err)
 	}
 	if q.getUnprocessedArticleIDStmt, err = db.PrepareContext(ctx, getUnprocessedArticleID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUnprocessedArticleID: %w", err)
+	}
+	if q.insertNewArticleEntitiesFromStagedEntitiesStmt, err = db.PrepareContext(ctx, insertNewArticleEntitiesFromStagedEntities); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertNewArticleEntitiesFromStagedEntities: %w", err)
+	}
+	if q.insertNewEntitiesFromStagedEntitiesStmt, err = db.PrepareContext(ctx, insertNewEntitiesFromStagedEntities); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertNewEntitiesFromStagedEntities: %w", err)
 	}
 	if q.listRawArticlesStmt, err = db.PrepareContext(ctx, listRawArticles); err != nil {
 		return nil, fmt.Errorf("error preparing query ListRawArticles: %w", err)
@@ -178,24 +184,34 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getStageExtractedEntities_ByArticleIDStmt: %w", cerr)
 		}
 	}
-	if q.getUniqueEntities_ByEntityTypeStmt != nil {
-		if cerr := q.getUniqueEntities_ByEntityTypeStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUniqueEntities_ByEntityTypeStmt: %w", cerr)
-		}
-	}
 	if q.getUniqueEntities_ByNameStmt != nil {
 		if cerr := q.getUniqueEntities_ByNameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUniqueEntities_ByNameStmt: %w", cerr)
 		}
 	}
-	if q.getUniqueEntities_ByName_EntityTypeStmt != nil {
-		if cerr := q.getUniqueEntities_ByName_EntityTypeStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getUniqueEntities_ByName_EntityTypeStmt: %w", cerr)
+	if q.getUniqueEntities_ByName_TypeStmt != nil {
+		if cerr := q.getUniqueEntities_ByName_TypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUniqueEntities_ByName_TypeStmt: %w", cerr)
+		}
+	}
+	if q.getUniqueEntities_ByTypeStmt != nil {
+		if cerr := q.getUniqueEntities_ByTypeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUniqueEntities_ByTypeStmt: %w", cerr)
 		}
 	}
 	if q.getUnprocessedArticleIDStmt != nil {
 		if cerr := q.getUnprocessedArticleIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUnprocessedArticleIDStmt: %w", cerr)
+		}
+	}
+	if q.insertNewArticleEntitiesFromStagedEntitiesStmt != nil {
+		if cerr := q.insertNewArticleEntitiesFromStagedEntitiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertNewArticleEntitiesFromStagedEntitiesStmt: %w", cerr)
+		}
+	}
+	if q.insertNewEntitiesFromStagedEntitiesStmt != nil {
+		if cerr := q.insertNewEntitiesFromStagedEntitiesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertNewEntitiesFromStagedEntitiesStmt: %w", cerr)
 		}
 	}
 	if q.listRawArticlesStmt != nil {
@@ -240,57 +256,61 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                        DBTX
-	tx                                        *sql.Tx
-	createAnnotatedArticleStmt                *sql.Stmt
-	createArticleStmt                         *sql.Stmt
-	createArticleEntitiesStmt                 *sql.Stmt
-	createStageExtractedEntityStmt            *sql.Stmt
-	createUniqueEntityStmt                    *sql.Stmt
-	deleteArticle_ByIDStmt                    *sql.Stmt
-	getAnnotatedArticlesStmt                  *sql.Stmt
-	getAnnotatedArticles_ByIDStmt             *sql.Stmt
-	getArticleEntities_ByArticleIDStmt        *sql.Stmt
-	getArticle_ByIDStmt                       *sql.Stmt
-	getArticle_ByListIDStmt                   *sql.Stmt
-	getArticlesStmt                           *sql.Stmt
-	getArticles_LimitStmt                     *sql.Stmt
-	getEntityType_ByNameStmt                  *sql.Stmt
-	getRawArticleStmt                         *sql.Stmt
-	getRawArticle_LimitStmt                   *sql.Stmt
-	getStageExtractedEntities_ByArticleIDStmt *sql.Stmt
-	getUniqueEntities_ByEntityTypeStmt        *sql.Stmt
-	getUniqueEntities_ByNameStmt              *sql.Stmt
-	getUniqueEntities_ByName_EntityTypeStmt   *sql.Stmt
-	getUnprocessedArticleIDStmt               *sql.Stmt
-	listRawArticlesStmt                       *sql.Stmt
+	db                                             DBTX
+	tx                                             *sql.Tx
+	createAnnotatedArticleStmt                     *sql.Stmt
+	createArticleStmt                              *sql.Stmt
+	createArticleEntitiesStmt                      *sql.Stmt
+	createStageExtractedEntityStmt                 *sql.Stmt
+	createUniqueEntityStmt                         *sql.Stmt
+	deleteArticle_ByIDStmt                         *sql.Stmt
+	getAnnotatedArticlesStmt                       *sql.Stmt
+	getAnnotatedArticles_ByIDStmt                  *sql.Stmt
+	getArticleEntities_ByArticleIDStmt             *sql.Stmt
+	getArticle_ByIDStmt                            *sql.Stmt
+	getArticle_ByListIDStmt                        *sql.Stmt
+	getArticlesStmt                                *sql.Stmt
+	getArticles_LimitStmt                          *sql.Stmt
+	getEntityType_ByNameStmt                       *sql.Stmt
+	getRawArticleStmt                              *sql.Stmt
+	getRawArticle_LimitStmt                        *sql.Stmt
+	getStageExtractedEntities_ByArticleIDStmt      *sql.Stmt
+	getUniqueEntities_ByNameStmt                   *sql.Stmt
+	getUniqueEntities_ByName_TypeStmt              *sql.Stmt
+	getUniqueEntities_ByTypeStmt                   *sql.Stmt
+	getUnprocessedArticleIDStmt                    *sql.Stmt
+	insertNewArticleEntitiesFromStagedEntitiesStmt *sql.Stmt
+	insertNewEntitiesFromStagedEntitiesStmt        *sql.Stmt
+	listRawArticlesStmt                            *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                        tx,
-		tx:                                        tx,
-		createAnnotatedArticleStmt:                q.createAnnotatedArticleStmt,
-		createArticleStmt:                         q.createArticleStmt,
-		createArticleEntitiesStmt:                 q.createArticleEntitiesStmt,
-		createStageExtractedEntityStmt:            q.createStageExtractedEntityStmt,
-		createUniqueEntityStmt:                    q.createUniqueEntityStmt,
-		deleteArticle_ByIDStmt:                    q.deleteArticle_ByIDStmt,
-		getAnnotatedArticlesStmt:                  q.getAnnotatedArticlesStmt,
-		getAnnotatedArticles_ByIDStmt:             q.getAnnotatedArticles_ByIDStmt,
-		getArticleEntities_ByArticleIDStmt:        q.getArticleEntities_ByArticleIDStmt,
-		getArticle_ByIDStmt:                       q.getArticle_ByIDStmt,
-		getArticle_ByListIDStmt:                   q.getArticle_ByListIDStmt,
-		getArticlesStmt:                           q.getArticlesStmt,
-		getArticles_LimitStmt:                     q.getArticles_LimitStmt,
-		getEntityType_ByNameStmt:                  q.getEntityType_ByNameStmt,
-		getRawArticleStmt:                         q.getRawArticleStmt,
-		getRawArticle_LimitStmt:                   q.getRawArticle_LimitStmt,
-		getStageExtractedEntities_ByArticleIDStmt: q.getStageExtractedEntities_ByArticleIDStmt,
-		getUniqueEntities_ByEntityTypeStmt:        q.getUniqueEntities_ByEntityTypeStmt,
-		getUniqueEntities_ByNameStmt:              q.getUniqueEntities_ByNameStmt,
-		getUniqueEntities_ByName_EntityTypeStmt:   q.getUniqueEntities_ByName_EntityTypeStmt,
-		getUnprocessedArticleIDStmt:               q.getUnprocessedArticleIDStmt,
-		listRawArticlesStmt:                       q.listRawArticlesStmt,
+		db:                                             tx,
+		tx:                                             tx,
+		createAnnotatedArticleStmt:                     q.createAnnotatedArticleStmt,
+		createArticleStmt:                              q.createArticleStmt,
+		createArticleEntitiesStmt:                      q.createArticleEntitiesStmt,
+		createStageExtractedEntityStmt:                 q.createStageExtractedEntityStmt,
+		createUniqueEntityStmt:                         q.createUniqueEntityStmt,
+		deleteArticle_ByIDStmt:                         q.deleteArticle_ByIDStmt,
+		getAnnotatedArticlesStmt:                       q.getAnnotatedArticlesStmt,
+		getAnnotatedArticles_ByIDStmt:                  q.getAnnotatedArticles_ByIDStmt,
+		getArticleEntities_ByArticleIDStmt:             q.getArticleEntities_ByArticleIDStmt,
+		getArticle_ByIDStmt:                            q.getArticle_ByIDStmt,
+		getArticle_ByListIDStmt:                        q.getArticle_ByListIDStmt,
+		getArticlesStmt:                                q.getArticlesStmt,
+		getArticles_LimitStmt:                          q.getArticles_LimitStmt,
+		getEntityType_ByNameStmt:                       q.getEntityType_ByNameStmt,
+		getRawArticleStmt:                              q.getRawArticleStmt,
+		getRawArticle_LimitStmt:                        q.getRawArticle_LimitStmt,
+		getStageExtractedEntities_ByArticleIDStmt:      q.getStageExtractedEntities_ByArticleIDStmt,
+		getUniqueEntities_ByNameStmt:                   q.getUniqueEntities_ByNameStmt,
+		getUniqueEntities_ByName_TypeStmt:              q.getUniqueEntities_ByName_TypeStmt,
+		getUniqueEntities_ByTypeStmt:                   q.getUniqueEntities_ByTypeStmt,
+		getUnprocessedArticleIDStmt:                    q.getUnprocessedArticleIDStmt,
+		insertNewArticleEntitiesFromStagedEntitiesStmt: q.insertNewArticleEntitiesFromStagedEntitiesStmt,
+		insertNewEntitiesFromStagedEntitiesStmt:        q.insertNewEntitiesFromStagedEntitiesStmt,
+		listRawArticlesStmt:                            q.listRawArticlesStmt,
 	}
 }

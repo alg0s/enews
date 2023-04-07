@@ -18,3 +18,7 @@ INSERT INTO stage_extracted_entities (
 )
 RETURNING *
 ;
+
+-- name: TruncateStageExtractedEntities :exec
+TRUNCATE TABLE stage_extracted_entities cascade
+;

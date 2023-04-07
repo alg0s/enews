@@ -6,7 +6,7 @@ import (
 
 // combineEntityChunk combines tokens that are supposedly belonged to the same word
 // ref: https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_(tagging)
-func combineEntityChunk(s Sentence) []Token {
+func combineEntityChunk(s ParsedSentence) []Token {
 	var out []Token
 
 	i := 0
@@ -57,15 +57,19 @@ func combineEntityChunk(s Sentence) []Token {
 	return out
 }
 
-func getArticleEntities(a *Annotation) map[Entity]int {
-	// create a list of Entity instances extracted from the article
+// getArticleEntities creates a list of Entity instances extracted from the article
+func getArticleNERs(sentences *[]ParsedSentence) map[Entity]int {
+
 	var entities = make(map[Entity]int)
-	for _, sentence := range *a.ParsedContent {
+
+	for _, sentence := range *sentences {
 		// 1. Combine token chunk
 		sentence := combineEntityChunk(sentence)
 		for _, token := range sentence {
+
 			// 2. Filter out Named Entities
 			if token.NerLabel != "O" {
+
 				// 3. Clean entity
 				name := token.Form
 				name = cleanEntity(name)
